@@ -1,6 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/authRoutes.js';
+import eventRoutes from './routes/eventRoutes.js';
+import registrationRoutes from './routes/registrationRoutes.js';
+import attendanceRoutes from './routes/attendanceRoutes.js';
+import certificateRoutes from './routes/certificateRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 const app = express();
 
@@ -15,6 +20,11 @@ app.get('/api/health', (req, res) => {
 
 // Route registries
 app.use('/api/auth', authRoutes);
+app.use('/api/events', eventRoutes);
+app.use('/api/events', registrationRoutes);
+app.use('/api/events', attendanceRoutes);
+app.use('/api/events', certificateRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Catch-all 404 route
 app.use((req, res) => {

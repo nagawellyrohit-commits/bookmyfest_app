@@ -181,3 +181,75 @@ export const getMe = async (req, res, next) => {
     next(error);
   }
 };
+
+// Get pending coordinators for faculty admin's college
+export const getPendingCoordinators = async (req, res, next) => {
+  try {
+    const actor = req.user;
+    if (actor.role !== 'faculty_admin' && actor.role !== 'super_admin') {
+      return res.status(403).json({ success: false, message: 'Only faculty admins can view pending coordinators' });
+    }
+
+    const pending = await prisma.user.findMany({
+      where: {
+        role: 'coordinator',
+        isVerified: false,
+        collegeId: actor.role === 'super_admin' ? undefined : actor.collegeId
+      },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        phone: true,
+        department: true,
+        idProofUrl: true,
+        createdAt: true
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      data: pending
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Approve coordinator verification
+export const verifyCoordinator = async (req, res, next) => {
+  const { userId } = req.params;
+  try {
+    const actor = req.user;
+    if (actor.role !== 'faculty_admin' && actor.role !== 'super_admin') {
+      return res.status(403).json({ success: false, message: 'Only faculty admins can verify coordinators' });
+    }
+
+    const targetUser = await prisma.user.findUnique({ where: { id: userId } });
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'Coordinator not found' });
+    }
+
+    if (actor.role !== 'super_admin' && targetUser.collegeId !== actor.collegeId) {
+      return res.status(403).json({ success: false, message: 'Cannot verify coordinators for other colleges' });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { isVerified: true }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Coordinator verified successfully',
+      data: {
+        id: updatedUser.id,
+        fullName: updatedUser.fullName,
+        isVerified: updatedUser.isVerified
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

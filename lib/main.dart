@@ -7,13 +7,14 @@ import 'screens/profile_screen.dart';
 import 'screens/login_screen.dart';
 
 import 'providers/user_provider.dart';
+import 'theme/app_theme.dart';
 
 void main() {
   runApp(
     ChangeNotifierProvider(
-    create: (_) => UserProvider(),
-    child: const MyApp(),
-  ),
+      create: (_) => UserProvider(),
+      child: const MyApp(),
+    ),
   );
 }
 
@@ -24,10 +25,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Flutter Learning',
-      theme: ThemeData(
-        useMaterial3: true,
-      ),
+      title: 'CollegeConnect',
+      theme: AppTheme.themeData,
       home: const LoginScreen(),
     );
   }

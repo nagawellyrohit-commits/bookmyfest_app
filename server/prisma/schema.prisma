@@ -80,6 +80,7 @@ model Event {
   entryFee             Decimal        @default(0.00) @map("entry_fee") @db.Decimal(10, 2)
   upiId                String?        @map("upi_id")
   qrAttendanceCode     String         @unique @map("qr_attendance_code")
+  certificateTemplate  Json?          @map("certificate_template")
   createdAt            DateTime       @default(now()) @map("created_at")
   updatedAt            DateTime       @updatedAt @map("updated_at")
   registrations        Registration[]
