@@ -5,6 +5,7 @@ import 'screens/home_screen.dart';
 import 'screens/students_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/welcome_screen.dart';
 
 import 'providers/user_provider.dart';
 import 'theme/app_theme.dart';
@@ -27,7 +28,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'CollegeConnect',
       theme: AppTheme.themeData,
-      home: const LoginScreen(),
+      home: const WelcomeScreen(),
     );
   }
 }
