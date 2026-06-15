@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/students_screen.dart';
 import 'screens/profile_screen.dart';
-import 'screens/login_screen.dart';
 import 'screens/welcome_screen.dart';
 
 import 'providers/user_provider.dart';

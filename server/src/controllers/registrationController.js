@@ -5,7 +5,7 @@ import { sendEmailNotification, sendWhatsAppNotification } from '../utils/notifi
 // Register a user for an event
 export const registerForEvent = async (req, res, next) => {
   const { id: eventId } = req.params;
-  const { registrationType, paymentReference } = req.body;
+  const { registrationType, paymentReference, groupSize } = req.body;
   const userId = req.user.id;
 
   try {
@@ -22,6 +22,25 @@ export const registerForEvent = async (req, res, next) => {
     // 2. Check registration deadline
     if (new Date() > new Date(event.registrationDeadline)) {
       return res.status(400).json({ success: false, message: 'Registration deadline has passed' });
+    }
+
+    // Validate registration type and group size
+    const regType = registrationType || 'individual';
+    if (regType === 'group') {
+      if (event.eventType === 'individual') {
+        return res.status(400).json({ success: false, message: 'This event only allows individual registrations' });
+      }
+      const size = groupSize ? Number(groupSize) : 1;
+      if (size < event.minMembers || size > event.maxMembers) {
+        return res.status(400).json({
+          success: false,
+          message: `Group size must be between ${event.minMembers} and ${event.maxMembers} members`
+        });
+      }
+    } else {
+      if (event.eventType === 'group') {
+        return res.status(400).json({ success: false, message: 'This event only allows group registrations' });
+      }
     }
 
     // 3. Check if already registered
@@ -54,7 +73,7 @@ export const registerForEvent = async (req, res, next) => {
       data: {
         eventId,
         userId,
-        registrationType: registrationType || 'individual',
+        registrationType: regType,
         paymentStatus,
         paymentReference: event.isPaid ? paymentReference : null
       },
@@ -73,6 +92,10 @@ export const registerForEvent = async (req, res, next) => {
       messageText = `Hello ${registration.user.fullName},\n\nYour registration for the event "${event.title}" is confirmed! We look forward to seeing you.`;
     } else {
       messageText = `Hello ${registration.user.fullName},\n\nWe have received your registration for the paid event "${event.title}". Your registration is PENDING confirmation of your payment reference: ${paymentReference}. You will receive another alert once approved.`;
+    }
+
+    if (event.whatsAppGroupLink) {
+      messageText += `\n\nPlease join the WhatsApp group to stay in touch: ${event.whatsAppGroupLink}`;
     }
 
     // Async notify
@@ -121,7 +144,10 @@ export const getEventRegistrations = async (req, res, next) => {
             email: true,
             phone: true,
             department: true,
-            isFinalYear: true
+            isFinalYear: true,
+            college: {
+              select: { name: true }
+            }
           }
         }
       },
@@ -129,6 +155,25 @@ export const getEventRegistrations = async (req, res, next) => {
         registrationDate: 'desc'
       }
     });
+
+    // Enforce coordinator view limit (Name, College Name, Phone only)
+    if (actor.role === 'coordinator') {
+      const mapped = registrations.map(reg => ({
+        id: reg.id,
+        registrationType: reg.registrationType,
+        paymentStatus: reg.paymentStatus,
+        paymentReference: reg.paymentReference,
+        registrationDate: reg.registrationDate,
+        user: {
+          fullName: reg.user.fullName,
+          phone: reg.user.phone,
+          college: {
+            name: reg.user.college?.name || 'N/A'
+          }
+        }
+      }));
+      return res.status(200).json({ success: true, data: mapped });
+    }
 
     res.status(200).json({
       success: true,
@@ -211,6 +256,38 @@ export const confirmRegistrationPayment = async (req, res, next) => {
       data: updatedRegistration
     });
 
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Cancel/unregister a registration (Students only, before deadline)
+export const unregisterFromEvent = async (req, res, next) => {
+  const { id: eventId, regId } = req.params;
+  const userId = req.user.id;
+
+  try {
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Event not found' });
+    }
+
+    // Verify deadline
+    if (new Date() > new Date(event.registrationDeadline)) {
+      return res.status(400).json({ success: false, message: 'Cannot unregister: Registration deadline has passed' });
+    }
+
+    const registration = await prisma.registration.findUnique({ where: { id: regId } });
+    if (!registration || registration.eventId !== eventId || registration.userId !== userId) {
+      return res.status(404).json({ success: false, message: 'Registration not found or unauthorized' });
+    }
+
+    await prisma.registration.delete({ where: { id: regId } });
+
+    res.status(200).json({
+      success: true,
+      message: 'Successfully unregistered from the event'
+    });
   } catch (error) {
     next(error);
   }

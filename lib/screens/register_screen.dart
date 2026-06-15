@@ -18,6 +18,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _departmentController = TextEditingController();
   final _idProofController = TextEditingController();
   final _resumeController = TextEditingController();
+  final _studentIdController = TextEditingController();
+  final _businessNameController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _contactPhoneController = TextEditingController();
+  final _websiteUrlController = TextEditingController();
+  final _instagramUrlController = TextEditingController();
+  final _linkedinUrlController = TextEditingController();
+  final _branchController = TextEditingController();
+  final _passingYearController = TextEditingController();
 
   final _formKey = GlobalKey<FormState>();
   final _authService = AuthService();
@@ -25,7 +34,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
 
   late String _selectedRole;
-  bool _isFinalYear = false;
 
   final Color _brandColor = const Color(0xFFD30014); // Bennett Crimson Red
 
@@ -85,16 +93,47 @@ class _RegisterScreenState extends State<RegisterScreen> {
         idProofUrl: !isSuperAdmin && _idProofController.text.isNotEmpty
             ? _idProofController.text
             : "https://via.placeholder.com/150",
-        isFinalYear: isStudent ? _isFinalYear : false,
-        resumeUrl: isStudent && _isFinalYear && _resumeController.text.isNotEmpty
+        isFinalYear: false,
+        resumeUrl: isStudent && _resumeController.text.isNotEmpty
             ? _resumeController.text
+            : null,
+        studentId: isStudent ? _studentIdController.text : null,
+        businessName: isStudent && _businessNameController.text.isNotEmpty
+            ? _businessNameController.text
+            : null,
+        description: isStudent && _descriptionController.text.isNotEmpty
+            ? _descriptionController.text
+            : null,
+        contactPhone: isStudent && _contactPhoneController.text.isNotEmpty
+            ? _contactPhoneController.text
+            : null,
+        websiteUrl:
+            isStudent && _websiteUrlController.text.isNotEmpty
+            ? _websiteUrlController.text
+            : null,
+        instagramUrl:
+            isStudent && _instagramUrlController.text.isNotEmpty
+            ? _instagramUrlController.text
+            : null,
+        linkedinUrl:
+            isStudent && _linkedinUrlController.text.isNotEmpty
+            ? _linkedinUrlController.text
+            : null,
+        branch: isStudent && _branchController.text.isNotEmpty
+            ? _branchController.text
+            : null,
+        passingYear:
+            isStudent && _passingYearController.text.isNotEmpty
+            ? int.tryParse(_passingYearController.text)
             : null,
       );
 
       if (mounted) {
         String successMsg = "Registration completed successfully!";
-        if (_selectedRole == 'coordinator' || _selectedRole == 'faculty_admin') {
-          successMsg = "Registration successful! Your account is pending manual faculty verification.";
+        if (_selectedRole == 'coordinator' ||
+            _selectedRole == 'faculty_admin') {
+          successMsg =
+              "Registration successful! Your account is pending manual faculty verification.";
         }
 
         showDialog(
@@ -102,17 +141,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
           barrierDismissible: false,
           builder: (context) => AlertDialog(
             backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Text("Success", style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.bold)),
-            content: Text(successMsg, style: const TextStyle(color: Color(0xFF475569))),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: const Text(
+              "Success",
+              style: TextStyle(
+                color: Color(0xFF0F172A),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: Text(
+              successMsg,
+              style: const TextStyle(color: Color(0xFF475569)),
+            ),
             actions: [
               TextButton(
                 onPressed: () {
                   Navigator.pop(context); // Close dialog
                   Navigator.pop(context); // Go back to login screen
                 },
-                child: Text("OK", style: TextStyle(color: _brandColor, fontWeight: FontWeight.bold)),
-              )
+                child: Text(
+                  "OK",
+                  style: TextStyle(
+                    color: _brandColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ],
           ),
         );
@@ -120,10 +176,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString()),
-            backgroundColor: _brandColor,
-          ),
+          SnackBar(content: Text(e.toString()), backgroundColor: _brandColor),
         );
       }
     } finally {
@@ -175,10 +228,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         elevation: 0,
         title: const Text(
           "Create Account",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -207,10 +257,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const SizedBox(height: 6),
                   const Text(
                     "Provide your credentials to establish your profile",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF64748B),
-                    ),
+                    style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
                   ),
                   const SizedBox(height: 30),
 
@@ -220,13 +267,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+                      border: Border.all(
+                        color: const Color(0xFFE2E8F0),
+                        width: 1.2,
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
+                          color: Colors.black.withValues(alpha: 0.03),
                           blurRadius: 15,
                           offset: const Offset(0, 8),
-                        )
+                        ),
                       ],
                     ),
                     child: Column(
@@ -241,7 +291,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             prefixIcon: Icons.person_outline,
                           ),
                           validator: (val) {
-                            if (val == null || val.isEmpty) return "Please enter your name";
+                            if (val == null || val.isEmpty) {
+                              return "Please enter your name";
+                            }
                             return null;
                           },
                         ),
@@ -257,8 +309,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             prefixIcon: Icons.email_outlined,
                           ),
                           validator: (val) {
-                            if (val == null || val.isEmpty) return "Please enter your email";
-                            if (!val.contains("@")) return "Invalid email address";
+                            if (val == null || val.isEmpty) {
+                              return "Please enter your email";
+                            }
+                            if (!val.contains("@")) {
+                              return "Invalid email address";
+                            }
                             return null;
                           },
                         ),
@@ -274,17 +330,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             prefixIcon: Icons.lock_outline,
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                _obscurePassword
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
                                 color: const Color(0xFF94A3B8),
                               ),
                               onPressed: () {
-                                setState(() => _obscurePassword = !_obscurePassword);
+                                setState(
+                                  () => _obscurePassword = !_obscurePassword,
+                                );
                               },
                             ),
                           ),
                           validator: (val) {
-                            if (val == null || val.isEmpty) return "Please enter a password";
-                            if (val.length < 6) return "Password must be at least 6 characters";
+                            if (val == null || val.isEmpty) {
+                              return "Please enter a password";
+                            }
+                            if (val.length < 6) {
+                              return "Password must be at least 6 characters";
+                            }
                             return null;
                           },
                         ),
@@ -300,11 +364,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             prefixIcon: Icons.phone_outlined,
                           ),
                           validator: (val) {
-                            if (val == null || val.isEmpty) return "Please enter your phone number";
+                            if (val == null || val.isEmpty) {
+                              return "Please enter your phone number";
+                            }
                             return null;
                           },
                         ),
                         const SizedBox(height: 20),
+
+                        // Student ID (Only for Student Role)
+                        if (isStudent) ...[
+                          TextFormField(
+                            controller: _studentIdController,
+                            style: const TextStyle(color: Color(0xFF1E293B)),
+                            decoration: _lightInputDecoration(
+                              labelText: "Student ID / Roll Number",
+                              prefixIcon: Icons.badge_outlined,
+                            ),
+                            validator: (val) {
+                              if (val == null || val.trim().isEmpty) {
+                                return "Please enter your Student ID";
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                        ],
 
                         // College Name (Only if NOT Super Admin)
                         if (!isSuperAdmin) ...[
@@ -316,7 +401,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               prefixIcon: Icons.apartment_outlined,
                             ),
                             validator: (val) {
-                              if (val == null || val.isEmpty) return "Please enter your college name";
+                              if (val == null || val.isEmpty) {
+                                return "Please enter your college name";
+                              }
                               return null;
                             },
                           ),
@@ -330,7 +417,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               prefixIcon: Icons.badge_outlined,
                             ),
                             validator: (val) {
-                              if (val == null || val.isEmpty) return "Please enter your department";
+                              if (val == null || val.isEmpty) {
+                                return "Please enter your department";
+                              }
                               return null;
                             },
                           ),
@@ -348,78 +437,143 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           const SizedBox(height: 20),
                         ],
 
-                        // Final Year Toggle (Students Only)
+                        // Optional Job/Startup Profile (Students Only)
                         if (isStudent) ...[
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                "Are you in your Final Year?",
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF0F172A),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 10),
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: _brandColor.withValues(alpha: 0.3),
                                 ),
                               ),
-                              Switch(
-                                value: _isFinalYear,
-                                activeColor: _brandColor,
-                                onChanged: (val) {
-                                  setState(() => _isFinalYear = val);
-                                },
-                              ),
-                            ],
-                          ),
-                          
-                          // Expandable Job Profile section
-                          AnimatedCrossFade(
-                            firstChild: const SizedBox.shrink(),
-                            secondChild: Padding(
-                              padding: const EdgeInsets.only(top: 20),
-                              child: Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF8FAFC),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: _brandColor.withOpacity(0.3)),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: [
-                                    Text(
-                                      "Final Year Job Profile Collection",
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: _brandColor,
-                                      ),
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.stretch,
+                                children: [
+                                  Text(
+                                    "Job / Startup Profile (Optional)",
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: _brandColor,
                                     ),
-                                    const SizedBox(height: 6),
-                                    const Text(
-                                      "Note: This data is restricted to the client company/super admin.",
-                                      style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  const Text(
+                                    "Note: Fill these details if you wish to share startup/job details.",
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Color(0xFF64748B),
                                     ),
-                                    const SizedBox(height: 16),
-                                    TextFormField(
-                                      controller: _resumeController,
-                                      style: const TextStyle(color: Color(0xFF1E293B)),
-                                      decoration: _lightInputDecoration(
-                                        labelText: "Resume/CV Link (PDF Format)",
-                                        prefixIcon: Icons.picture_as_pdf_outlined,
-                                      ),
-                                      validator: (val) {
-                                        if (_isFinalYear && (val == null || val.isEmpty)) {
-                                          return "Please provide a resume URL";
-                                        }
-                                        return null;
-                                      },
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextFormField(
+                                    controller: _businessNameController,
+                                    style: const TextStyle(
+                                      color: Color(0xFF1E293B),
                                     ),
-                                  ],
-                                ),
+                                    decoration: _lightInputDecoration(
+                                      labelText: "Business/Startup Name (Optional)",
+                                      prefixIcon: Icons.business_center_outlined,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextFormField(
+                                    controller: _descriptionController,
+                                    style: const TextStyle(
+                                      color: Color(0xFF1E293B),
+                                    ),
+                                    decoration: _lightInputDecoration(
+                                      labelText: "Description of what company does (Optional)",
+                                      prefixIcon: Icons.description_outlined,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextFormField(
+                                    controller: _contactPhoneController,
+                                    style: const TextStyle(
+                                      color: Color(0xFF1E293B),
+                                    ),
+                                    keyboardType: TextInputType.phone,
+                                    decoration: _lightInputDecoration(
+                                      labelText: "Business Contact Phone Number (Optional)",
+                                      prefixIcon: Icons.phone_android_outlined,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextFormField(
+                                    controller: _resumeController,
+                                    style: const TextStyle(
+                                      color: Color(0xFF1E293B),
+                                    ),
+                                    decoration: _lightInputDecoration(
+                                      labelText: "Resume/CV Link (PDF Format, Optional)",
+                                      prefixIcon: Icons.picture_as_pdf_outlined,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextFormField(
+                                    controller: _websiteUrlController,
+                                    style: const TextStyle(
+                                      color: Color(0xFF1E293B),
+                                    ),
+                                    decoration: _lightInputDecoration(
+                                      labelText: "Webpage Link (Optional)",
+                                      prefixIcon: Icons.web_outlined,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextFormField(
+                                    controller: _instagramUrlController,
+                                    style: const TextStyle(
+                                      color: Color(0xFF1E293B),
+                                    ),
+                                    decoration: _lightInputDecoration(
+                                      labelText: "Instagram Link (Optional)",
+                                      prefixIcon: Icons.camera_alt_outlined,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextFormField(
+                                    controller: _linkedinUrlController,
+                                    style: const TextStyle(
+                                      color: Color(0xFF1E293B),
+                                    ),
+                                    decoration: _lightInputDecoration(
+                                      labelText: "LinkedIn Link (Optional)",
+                                      prefixIcon: Icons.link_outlined,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextFormField(
+                                    controller: _branchController,
+                                    style: const TextStyle(
+                                      color: Color(0xFF1E293B),
+                                    ),
+                                    decoration: _lightInputDecoration(
+                                      labelText: "Branch/Field (Optional)",
+                                      prefixIcon: Icons.school_outlined,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextFormField(
+                                    controller: _passingYearController,
+                                    style: const TextStyle(
+                                      color: Color(0xFF1E293B),
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    decoration: _lightInputDecoration(
+                                      labelText: "Passing Out Year (Optional)",
+                                      prefixIcon: Icons.calendar_today_outlined,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            crossFadeState: _isFinalYear ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-                            duration: const Duration(milliseconds: 300),
                           ),
                           const SizedBox(height: 20),
                         ],
@@ -428,28 +582,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                         // Sign Up Submit Button
                         _isLoading
-                            ? Center(child: CircularProgressIndicator(color: _brandColor))
+                            ? Center(
+                                child: CircularProgressIndicator(
+                                  color: _brandColor,
+                                ),
+                              )
                             : Container(
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
-                                    colors: [_brandColor, _brandColor.withOpacity(0.85)],
+                                    colors: [
+                                      _brandColor,
+                                      _brandColor.withValues(alpha: 0.85),
+                                    ],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
                                   borderRadius: BorderRadius.circular(16),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: _brandColor.withOpacity(0.3),
+                                      color: _brandColor.withValues(alpha: 0.3),
                                       blurRadius: 10,
                                       offset: const Offset(0, 4),
-                                    )
+                                    ),
                                   ],
                                 ),
                                 child: ElevatedButton(
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.transparent,
                                     shadowColor: Colors.transparent,
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                    ),
                                   ),
                                   onPressed: _register,
                                   child: const Text(
@@ -486,7 +649,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                      )
+                      ),
                     ],
                   ),
                   const SizedBox(height: 40),

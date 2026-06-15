@@ -12,6 +12,7 @@ class UserProvider extends ChangeNotifier {
   bool _isVerified = false;
   String? _department;
   bool _isFinalYear = false;
+  bool _isPendingDeletion = false;
 
   // Getters
   String? get token => _token;
@@ -25,6 +26,7 @@ class UserProvider extends ChangeNotifier {
   bool get isVerified => _isVerified;
   String? get department => _department;
   bool get isFinalYear => _isFinalYear;
+  bool get isPendingDeletion => _isPendingDeletion;
 
   bool get isLoggedIn => _token != null;
 
@@ -37,15 +39,17 @@ class UserProvider extends ChangeNotifier {
     _phone = userMap['phone'];
     _role = userMap['role'];
     _collegeId = userMap['collegeId'] ?? userMap['college_id'];
-    
+
     // College relationship parse
     if (userMap['college'] != null) {
       _collegeName = userMap['college']['name'];
     }
-    
+
     _isVerified = userMap['isVerified'] ?? userMap['is_verified'] ?? false;
     _department = userMap['department'];
     _isFinalYear = userMap['isFinalYear'] ?? userMap['is_final_year'] ?? false;
+    _isPendingDeletion =
+        userMap['isPendingDeletion'] ?? userMap['is_pending_deletion'] ?? false;
 
     notifyListeners();
   }
@@ -63,6 +67,7 @@ class UserProvider extends ChangeNotifier {
     _isVerified = false;
     _department = null;
     _isFinalYear = false;
+    _isPendingDeletion = false;
 
     notifyListeners();
   }

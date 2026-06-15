@@ -64,7 +64,7 @@ class AppTheme {
       border: Border.all(color: const Color(0xFF1E293B)),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.2),
+          color: Colors.black.withValues(alpha: 0.2),
           blurRadius: 15,
           offset: const Offset(0, 8),
         ),
@@ -75,12 +75,12 @@ class AppTheme {
   // Glassmorphic Card decoration
   static BoxDecoration glassDecoration() {
     return BoxDecoration(
-      color: surface.withOpacity(0.7),
+      color: surface.withValues(alpha: 0.7),
       borderRadius: BorderRadius.circular(24),
-      border: Border.all(color: Colors.white.withOpacity(0.08)),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.25),
+          color: Colors.black.withValues(alpha: 0.25),
           blurRadius: 20,
           offset: const Offset(0, 10),
         ),

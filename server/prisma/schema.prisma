@@ -45,6 +45,8 @@ model User {
   idProofUrl    String?        @map("id_proof_url")
   isFinalYear   Boolean        @default(false) @map("is_final_year")
   isVerified    Boolean        @default(false) @map("is_verified")
+  studentId     String?        @map("student_id")
+  isPendingDeletion Boolean      @default(false) @map("is_pending_deletion")
   createdAt     DateTime       @default(now()) @map("created_at")
   jobProfile    JobProfile?
   createdEvents Event[]        @relation("CreatedEvents")
@@ -60,8 +62,16 @@ model JobProfile {
   id        String   @id @default(uuid())
   userId    String   @unique @map("user_id")
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  resumeUrl String   @map("resume_url")
-  createdAt DateTime @default(now()) @map("created_at")
+  resumeUrl    String   @map("resume_url")
+  businessName String?  @map("business_name")
+  description  String?
+  contactPhone String?  @map("contact_phone")
+  websiteUrl   String?  @map("website_url")
+  instagramUrl String?  @map("instagram_url")
+  linkedinUrl  String?  @map("linkedin_url")
+  branch       String?
+  passingYear  Int?     @map("passing_year")
+  createdAt    DateTime @default(now()) @map("created_at")
 
   @@map("job_profiles")
 }
@@ -81,6 +91,20 @@ model Event {
   upiId                String?        @map("upi_id")
   qrAttendanceCode     String         @unique @map("qr_attendance_code")
   certificateTemplate  Json?          @map("certificate_template")
+  branch               String         @default("Open")
+  brochureUrl          String?        @map("brochure_url")
+  brochurePages        Int            @default(0) @map("brochure_pages")
+  posterUrl1           String?        @map("poster_url_1")
+  posterUrl2           String?        @map("poster_url_2")
+  posterUrl3           String?        @map("poster_url_3")
+  posterUrl4           String?        @map("poster_url_4")
+  whatsAppGroupLink    String?        @map("whatsapp_group_link")
+  eventType            String         @default("individual") @map("event_type")
+  minMembers           Int            @default(1) @map("min_members")
+  maxMembers           Int            @default(1) @map("max_members")
+  isApproved           Boolean        @default(true) @map("is_approved")
+  isPendingDeletion    Boolean        @default(false) @map("is_pending_deletion")
+  pendingUpdates       Json?          @map("pending_updates")
   createdAt            DateTime       @default(now()) @map("created_at")
   updatedAt            DateTime       @updatedAt @map("updated_at")
   registrations        Registration[]

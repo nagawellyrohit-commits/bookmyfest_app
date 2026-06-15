@@ -159,7 +159,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
                                     color: Colors.redAccent,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.red.withOpacity(0.8),
+                                        color: Colors.red.withValues(alpha: 0.8),
                                         blurRadius: 8,
                                         spreadRadius: 1,
                                       )

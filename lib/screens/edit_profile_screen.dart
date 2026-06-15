@@ -1,0 +1,350 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../theme/app_theme.dart';
+import '../providers/user_provider.dart';
+import '../services/auth_service.dart';
+
+class EditProfileScreen extends StatefulWidget {
+  const EditProfileScreen({super.key});
+
+  @override
+  State<EditProfileScreen> createState() => _EditProfileScreenState();
+}
+
+class _EditProfileScreenState extends State<EditProfileScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _authService = AuthService();
+  bool _isLoading = true;
+  bool _isSaving = false;
+
+  final _fullNameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _departmentController = TextEditingController();
+  final _studentIdController = TextEditingController();
+
+  // Job Profile controllers
+  final _resumeController = TextEditingController();
+  final _businessNameController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _contactPhoneController = TextEditingController();
+  final _websiteUrlController = TextEditingController();
+  final _instagramUrlController = TextEditingController();
+  final _linkedinUrlController = TextEditingController();
+  final _branchController = TextEditingController();
+  final _passingYearController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  @override
+  void dispose() {
+    _fullNameController.dispose();
+    _phoneController.dispose();
+    _departmentController.dispose();
+    _studentIdController.dispose();
+    _resumeController.dispose();
+    _businessNameController.dispose();
+    _descriptionController.dispose();
+    _contactPhoneController.dispose();
+    _websiteUrlController.dispose();
+    _instagramUrlController.dispose();
+    _linkedinUrlController.dispose();
+    _branchController.dispose();
+    _passingYearController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final profile = await _authService.getMe(userProvider.token!);
+      
+      // Update basic fields
+      _fullNameController.text = profile['fullName'] ?? '';
+      _phoneController.text = profile['phone'] ?? '';
+      _departmentController.text = profile['department'] ?? '';
+      _studentIdController.text = profile['studentId'] ?? '';
+
+      // Update job profile fields
+      if (profile['jobProfile'] != null) {
+        final jp = profile['jobProfile'];
+        _resumeController.text = jp['resumeUrl'] ?? '';
+        _businessNameController.text = jp['businessName'] ?? '';
+        _descriptionController.text = jp['description'] ?? '';
+        _contactPhoneController.text = jp['contactPhone'] ?? '';
+        _websiteUrlController.text = jp['websiteUrl'] ?? '';
+        _instagramUrlController.text = jp['instagramUrl'] ?? '';
+        _linkedinUrlController.text = jp['linkedinUrl'] ?? '';
+        _branchController.text = jp['branch'] ?? '';
+        _passingYearController.text = jp['passingYear'] != null ? jp['passingYear'].toString() : '';
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error loading profile: $e"), backgroundColor: AppTheme.accent),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSaving = true);
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      
+      // Call update API
+      final response = await _authService.updateProfile(
+        userProvider.token!,
+        fullName: _fullNameController.text,
+        phone: _phoneController.text,
+        department: _departmentController.text,
+        studentId: userProvider.role == 'student' ? _studentIdController.text : null,
+        resumeUrl: _resumeController.text.isNotEmpty ? _resumeController.text : null,
+        businessName: _businessNameController.text.isNotEmpty ? _businessNameController.text : null,
+        description: _descriptionController.text.isNotEmpty ? _descriptionController.text : null,
+        contactPhone: _contactPhoneController.text.isNotEmpty ? _contactPhoneController.text : null,
+        websiteUrl: _websiteUrlController.text.isNotEmpty ? _websiteUrlController.text : null,
+        instagramUrl: _instagramUrlController.text.isNotEmpty ? _instagramUrlController.text : null,
+        linkedinUrl: _linkedinUrlController.text.isNotEmpty ? _linkedinUrlController.text : null,
+        branch: _branchController.text.isNotEmpty ? _branchController.text : null,
+        passingYear: _passingYearController.text.isNotEmpty ? int.tryParse(_passingYearController.text) : null,
+      );
+
+      // Refresh local UserProvider session
+      if (response['success'] == true && response['data'] != null) {
+        final userData = response['data']['user'];
+        // Re-inject college info if present
+        if (userData != null) {
+          userData['college'] = { "name": userProvider.collegeName };
+          userProvider.setSession(userProvider.token!, userData);
+        }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Profile updated successfully!"), backgroundColor: Colors.green),
+        );
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error saving profile: $e"), backgroundColor: AppTheme.accent),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final userProvider = Provider.of<UserProvider>(context);
+    final isStudent = userProvider.role == 'student';
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Edit Profile"),
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      "Personal Details",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _fullNameController,
+                      style: const TextStyle(color: AppTheme.textPrimary),
+                      decoration: AppTheme.inputDecoration(
+                        labelText: "Full Name",
+                        prefixIcon: Icons.person_outline,
+                      ),
+                      validator: (val) {
+                        if (val == null || val.isEmpty) {
+                          return "Please enter your name";
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _phoneController,
+                      style: const TextStyle(color: AppTheme.textPrimary),
+                      decoration: AppTheme.inputDecoration(
+                        labelText: "Phone Number",
+                        prefixIcon: Icons.phone_outlined,
+                      ),
+                      validator: (val) {
+                        if (val == null || val.isEmpty) {
+                          return "Please enter your phone number";
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _departmentController,
+                      style: const TextStyle(color: AppTheme.textPrimary),
+                      decoration: AppTheme.inputDecoration(
+                        labelText: "Department / Major",
+                        prefixIcon: Icons.badge_outlined,
+                      ),
+                      validator: (val) {
+                        if (val == null || val.isEmpty) {
+                          return "Please enter your department";
+                        }
+                        return null;
+                      },
+                    ),
+                    if (isStudent) ...[
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _studentIdController,
+                        style: const TextStyle(color: AppTheme.textPrimary),
+                        decoration: AppTheme.inputDecoration(
+                          labelText: "Student ID / Roll Number",
+                          prefixIcon: Icons.card_membership_outlined,
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return "Please enter your Student ID";
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 32),
+                      const Text(
+                        "Job / Startup Profile (Optional)",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: AppTheme.cardDecoration(),
+                        child: Column(
+                          children: [
+                            TextFormField(
+                              controller: _businessNameController,
+                              style: const TextStyle(color: AppTheme.textPrimary),
+                              decoration: AppTheme.inputDecoration(
+                                labelText: "Business/Startup Name",
+                                prefixIcon: Icons.business_center_outlined,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _descriptionController,
+                              style: const TextStyle(color: AppTheme.textPrimary),
+                              decoration: AppTheme.inputDecoration(
+                                labelText: "Description of what company does",
+                                prefixIcon: Icons.description_outlined,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _contactPhoneController,
+                              style: const TextStyle(color: AppTheme.textPrimary),
+                              decoration: AppTheme.inputDecoration(
+                                labelText: "Business Contact Phone",
+                                prefixIcon: Icons.phone_android_outlined,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _resumeController,
+                              style: const TextStyle(color: AppTheme.textPrimary),
+                              decoration: AppTheme.inputDecoration(
+                                labelText: "Resume/CV Link (PDF Format)",
+                                prefixIcon: Icons.picture_as_pdf_outlined,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _websiteUrlController,
+                              style: const TextStyle(color: AppTheme.textPrimary),
+                              decoration: AppTheme.inputDecoration(
+                                labelText: "Webpage Link",
+                                prefixIcon: Icons.web_outlined,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _instagramUrlController,
+                              style: const TextStyle(color: AppTheme.textPrimary),
+                              decoration: AppTheme.inputDecoration(
+                                labelText: "Instagram Link",
+                                prefixIcon: Icons.camera_alt_outlined,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _linkedinUrlController,
+                              style: const TextStyle(color: AppTheme.textPrimary),
+                              decoration: AppTheme.inputDecoration(
+                                labelText: "LinkedIn Link",
+                                prefixIcon: Icons.link_outlined,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _branchController,
+                              style: const TextStyle(color: AppTheme.textPrimary),
+                              decoration: AppTheme.inputDecoration(
+                                labelText: "Branch/Field",
+                                prefixIcon: Icons.school_outlined,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _passingYearController,
+                              style: const TextStyle(color: AppTheme.textPrimary),
+                              decoration: AppTheme.inputDecoration(
+                                labelText: "Passing Out Year",
+                                prefixIcon: Icons.calendar_today_outlined,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 32),
+                    _isSaving
+                        ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                        : ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(50),
+                            ),
+                            onPressed: _saveProfile,
+                            child: const Text("Save Changes"),
+                          ),
+                    const SizedBox(height: 40),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+}

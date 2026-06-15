@@ -4,11 +4,23 @@ import {
   getAllEvents,
   getEventById,
   updateEvent,
-  deleteEvent
+  deleteEvent,
+  getPendingEventApprovals,
+  approveEventUpdate,
+  rejectEventUpdate,
+  approveEventDelete,
+  rejectEventDelete
 } from '../controllers/eventController.js';
 import { authenticateToken, authorizeRoles } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
+
+// Pending approvals list and actions (Faculty Admin / Super Admin)
+router.get('/pending-approvals', authenticateToken, authorizeRoles('faculty_admin', 'super_admin'), getPendingEventApprovals);
+router.post('/:id/approve-update', authenticateToken, authorizeRoles('faculty_admin', 'super_admin'), approveEventUpdate);
+router.post('/:id/reject-update', authenticateToken, authorizeRoles('faculty_admin', 'super_admin'), rejectEventUpdate);
+router.post('/:id/approve-delete', authenticateToken, authorizeRoles('faculty_admin', 'super_admin'), approveEventDelete);
+router.post('/:id/reject-delete', authenticateToken, authorizeRoles('faculty_admin', 'super_admin'), rejectEventDelete);
 
 // Public routes for logged in users (Students see all; Coordinators & Admins see college-specific)
 router.get('/', authenticateToken, getAllEvents);

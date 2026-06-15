@@ -6,9 +6,9 @@ class EventService {
 
   // Helpers to get request headers
   Map<String, String> _headers(String token) => {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-      };
+    "Content-Type": "application/json",
+    "Authorization": "Bearer $token",
+  };
 
   // Fetch all events (filtered by college automatically for coordinators/admins)
   Future<List<dynamic>> getEvents(String token) async {
@@ -28,7 +28,10 @@ class EventService {
   }
 
   // Fetch specific event details
-  Future<Map<String, dynamic>> getEventDetails(String token, String eventId) async {
+  Future<Map<String, dynamic>> getEventDetails(
+    String token,
+    String eventId,
+  ) async {
     try {
       final response = await http.get(
         Uri.parse("$baseUrl/events/$eventId"),
@@ -38,14 +41,19 @@ class EventService {
       if (response.statusCode == 200 && responseData['success'] == true) {
         return responseData['data'];
       }
-      throw Exception(responseData['message'] ?? 'Failed to load event details');
+      throw Exception(
+        responseData['message'] ?? 'Failed to load event details',
+      );
     } catch (e) {
       throw Exception(e.toString().replaceAll("Exception: ", ""));
     }
   }
 
   // Create a new event
-  Future<Map<String, dynamic>> createEvent(String token, Map<String, dynamic> eventData) async {
+  Future<Map<String, dynamic>> createEvent(
+    String token,
+    Map<String, dynamic> eventData,
+  ) async {
     try {
       final response = await http.post(
         Uri.parse("$baseUrl/events"),
@@ -63,7 +71,11 @@ class EventService {
   }
 
   // Update event
-  Future<Map<String, dynamic>> updateEvent(String token, String eventId, Map<String, dynamic> eventData) async {
+  Future<Map<String, dynamic>> updateEvent(
+    String token,
+    String eventId,
+    Map<String, dynamic> eventData,
+  ) async {
     try {
       final response = await http.put(
         Uri.parse("$baseUrl/events/$eventId"),
@@ -72,7 +84,7 @@ class EventService {
       );
       final responseData = jsonDecode(response.body);
       if (response.statusCode == 200 && responseData['success'] == true) {
-        return responseData['data'];
+        return responseData['data'] ?? responseData;
       }
       throw Exception(responseData['message'] ?? 'Failed to update event');
     } catch (e) {
@@ -102,6 +114,7 @@ class EventService {
     String eventId, {
     required String registrationType,
     String? paymentReference,
+    int? groupSize,
   }) async {
     try {
       final response = await http.post(
@@ -109,11 +122,13 @@ class EventService {
         headers: _headers(token),
         body: jsonEncode({
           "registrationType": registrationType,
-          if (paymentReference != null) "paymentReference": paymentReference,
+          "paymentReference": ?paymentReference,
+          "groupSize": ?groupSize,
         }),
       );
       final responseData = jsonDecode(response.body);
-      if ((response.statusCode == 201 || response.statusCode == 200) && responseData['success'] == true) {
+      if ((response.statusCode == 201 || response.statusCode == 200) &&
+          responseData['success'] == true) {
         return responseData;
       }
       throw Exception(responseData['message'] ?? 'Registration failed');
@@ -122,8 +137,31 @@ class EventService {
     }
   }
 
+  // Unregister from an event
+  Future<void> unregisterFromEvent(
+    String token,
+    String eventId,
+    String regId,
+  ) async {
+    try {
+      final response = await http.delete(
+        Uri.parse("$baseUrl/events/$eventId/registrations/$regId"),
+        headers: _headers(token),
+      );
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode != 200 || responseData['success'] != true) {
+        throw Exception(responseData['message'] ?? 'Failed to unregister');
+      }
+    } catch (e) {
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
+    }
+  }
+
   // Fetch registrations (Coordinator/Admin view)
-  Future<List<dynamic>> getEventRegistrations(String token, String eventId) async {
+  Future<List<dynamic>> getEventRegistrations(
+    String token,
+    String eventId,
+  ) async {
     try {
       final response = await http.get(
         Uri.parse("$baseUrl/events/$eventId/registrations"),
@@ -133,14 +171,20 @@ class EventService {
       if (response.statusCode == 200 && responseData['success'] == true) {
         return responseData['data'];
       }
-      throw Exception(responseData['message'] ?? 'Failed to load registrations');
+      throw Exception(
+        responseData['message'] ?? 'Failed to load registrations',
+      );
     } catch (e) {
       throw Exception(e.toString().replaceAll("Exception: ", ""));
     }
   }
 
   // Confirm registration payment (Coordinator action)
-  Future<void> confirmPayment(String token, String eventId, String regId) async {
+  Future<void> confirmPayment(
+    String token,
+    String eventId,
+    String regId,
+  ) async {
     try {
       final response = await http.post(
         Uri.parse("$baseUrl/events/$eventId/registrations/$regId/confirm"),
@@ -156,7 +200,11 @@ class EventService {
   }
 
   // Scan QR code to mark attendance
-  Future<Map<String, dynamic>> scanQrCode(String token, String eventId, String qrCode) async {
+  Future<Map<String, dynamic>> scanQrCode(
+    String token,
+    String eventId,
+    String qrCode,
+  ) async {
     try {
       final response = await http.post(
         Uri.parse("$baseUrl/events/$eventId/scan"),
@@ -164,7 +212,8 @@ class EventService {
         body: jsonEncode({"qrCode": qrCode}),
       );
       final responseData = jsonDecode(response.body);
-      if ((response.statusCode == 200 || response.statusCode == 201) && responseData['success'] == true) {
+      if ((response.statusCode == 200 || response.statusCode == 201) &&
+          responseData['success'] == true) {
         return responseData;
       }
       throw Exception(responseData['message'] ?? 'Failed to verify QR scan');
@@ -191,7 +240,11 @@ class EventService {
   }
 
   // Manually verify attendance override
-  Future<void> verifyAttendance(String token, String eventId, String attendanceId) async {
+  Future<void> verifyAttendance(
+    String token,
+    String eventId,
+    String attendanceId,
+  ) async {
     try {
       final response = await http.post(
         Uri.parse("$baseUrl/events/$eventId/attendance/$attendanceId/verify"),
@@ -199,7 +252,9 @@ class EventService {
       );
       final responseData = jsonDecode(response.body);
       if (response.statusCode != 200 || responseData['success'] != true) {
-        throw Exception(responseData['message'] ?? 'Failed to verify attendance');
+        throw Exception(
+          responseData['message'] ?? 'Failed to verify attendance',
+        );
       }
     } catch (e) {
       throw Exception(e.toString().replaceAll("Exception: ", ""));
@@ -207,7 +262,10 @@ class EventService {
   }
 
   // Get AI suggested certificate templates
-  Future<List<dynamic>> getCertificateSuggestions(String token, String eventId) async {
+  Future<List<dynamic>> getCertificateSuggestions(
+    String token,
+    String eventId,
+  ) async {
     try {
       final response = await http.get(
         Uri.parse("$baseUrl/events/$eventId/certificates/suggestions"),
@@ -217,14 +275,20 @@ class EventService {
       if (response.statusCode == 200 && responseData['success'] == true) {
         return responseData['data'];
       }
-      throw Exception(responseData['message'] ?? 'Failed to load certificate suggestions');
+      throw Exception(
+        responseData['message'] ?? 'Failed to load certificate suggestions',
+      );
     } catch (e) {
       throw Exception(e.toString().replaceAll("Exception: ", ""));
     }
   }
 
   // Approve a certificate template
-  Future<void> approveCertificateTemplate(String token, String eventId, Map<String, dynamic> template) async {
+  Future<void> approveCertificateTemplate(
+    String token,
+    String eventId,
+    Map<String, dynamic> template,
+  ) async {
     try {
       final response = await http.post(
         Uri.parse("$baseUrl/events/$eventId/certificates/approve"),
@@ -233,7 +297,9 @@ class EventService {
       );
       final responseData = jsonDecode(response.body);
       if (response.statusCode != 200 || responseData['success'] != true) {
-        throw Exception(responseData['message'] ?? 'Failed to approve template');
+        throw Exception(
+          responseData['message'] ?? 'Failed to approve template',
+        );
       }
     } catch (e) {
       throw Exception(e.toString().replaceAll("Exception: ", ""));
@@ -251,7 +317,94 @@ class EventService {
       if (response.statusCode == 200 && responseData['success'] == true) {
         return responseData['data'];
       }
-      throw Exception(responseData['message'] ?? 'Failed to load final year profiles');
+      throw Exception(
+        responseData['message'] ?? 'Failed to load final year profiles',
+      );
+    } catch (e) {
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
+    }
+  }
+
+  // Get pending event approvals (Faculty Admin)
+  Future<List<dynamic>> getPendingEventApprovals(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse("$baseUrl/events/pending-approvals"),
+        headers: _headers(token),
+      );
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        return responseData['data'];
+      }
+      throw Exception(
+        responseData['message'] ?? 'Failed to load pending event approvals',
+      );
+    } catch (e) {
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
+    }
+  }
+
+  // Approve updates
+  Future<void> approveEventUpdate(String token, String eventId) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/events/$eventId/approve-update"),
+        headers: _headers(token),
+      );
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode != 200 || responseData['success'] != true) {
+        throw Exception(responseData['message'] ?? 'Failed to approve updates');
+      }
+    } catch (e) {
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
+    }
+  }
+
+  // Discard updates
+  Future<void> rejectEventUpdate(String token, String eventId) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/events/$eventId/reject-update"),
+        headers: _headers(token),
+      );
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode != 200 || responseData['success'] != true) {
+        throw Exception(responseData['message'] ?? 'Failed to reject updates');
+      }
+    } catch (e) {
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
+    }
+  }
+
+  // Approve delete
+  Future<void> approveEventDelete(String token, String eventId) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/events/$eventId/approve-delete"),
+        headers: _headers(token),
+      );
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode != 200 || responseData['success'] != true) {
+        throw Exception(
+          responseData['message'] ?? 'Failed to approve deletion',
+        );
+      }
+    } catch (e) {
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
+    }
+  }
+
+  // Discard delete
+  Future<void> rejectEventDelete(String token, String eventId) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/events/$eventId/reject-delete"),
+        headers: _headers(token),
+      );
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode != 200 || responseData['success'] != true) {
+        throw Exception(responseData['message'] ?? 'Failed to reject deletion');
+      }
     } catch (e) {
       throw Exception(e.toString().replaceAll("Exception: ", ""));
     }

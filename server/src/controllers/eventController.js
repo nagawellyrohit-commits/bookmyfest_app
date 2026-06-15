@@ -11,7 +11,18 @@ export const createEvent = async (req, res, next) => {
     registrationDeadline,
     isPaid,
     entryFee,
-    upiId
+    upiId,
+    branch,
+    brochureUrl,
+    brochurePages,
+    posterUrl1,
+    posterUrl2,
+    posterUrl3,
+    posterUrl4,
+    whatsAppGroupLink,
+    eventType,
+    minMembers,
+    maxMembers
   } = req.body;
 
   try {
@@ -38,6 +49,12 @@ export const createEvent = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'User must belong to a college to create events' });
     }
 
+    // Validate brochure page count
+    const brochurePagesNum = brochurePages ? Number(brochurePages) : 0;
+    if (brochurePagesNum > 150) {
+      return res.status(400).json({ success: false, message: 'Brochure limit is 150 pages' });
+    }
+
     // Generate unique QR code string
     const qrAttendanceCode = `cc_qr_${crypto.randomUUID()}`;
 
@@ -52,7 +69,20 @@ export const createEvent = async (req, res, next) => {
         isPaid: !!isPaid,
         entryFee: isPaid ? Number(entryFee) : 0.00,
         upiId: isPaid ? upiId : null,
-        qrAttendanceCode
+        qrAttendanceCode,
+        branch: branch || 'Open',
+        brochureUrl: brochureUrl || null,
+        brochurePages: brochurePagesNum,
+        posterUrl1: posterUrl1 || null,
+        posterUrl2: posterUrl2 || null,
+        posterUrl3: posterUrl3 || null,
+        posterUrl4: posterUrl4 || null,
+        whatsAppGroupLink: whatsAppGroupLink || null,
+        eventType: eventType || 'individual',
+        minMembers: minMembers ? Number(minMembers) : 1,
+        maxMembers: maxMembers ? Number(maxMembers) : 1,
+        isApproved: true,
+        isPendingDeletion: false
       }
     });
 
@@ -96,6 +126,11 @@ export const getAllEvents = async (req, res, next) => {
         },
         creator: {
           select: { fullName: true, email: true }
+        },
+        registrations: {
+          where: {
+            userId: actor.id
+          }
         }
       },
       orderBy: {
@@ -126,6 +161,11 @@ export const getEventById = async (req, res, next) => {
         },
         creator: {
           select: { fullName: true, email: true }
+        },
+        registrations: {
+          where: {
+            userId: actor.id
+          }
         }
       }
     });
@@ -154,15 +194,7 @@ export const getEventById = async (req, res, next) => {
 // Update an existing event
 export const updateEvent = async (req, res, next) => {
   const { id } = req.params;
-  const {
-    title,
-    description,
-    eventDate,
-    registrationDeadline,
-    isPaid,
-    entryFee,
-    upiId
-  } = req.body;
+  const updateData = req.body;
 
   try {
     const actor = req.user;
@@ -188,29 +220,55 @@ export const updateEvent = async (req, res, next) => {
       });
     }
 
-    // Update payload
+    // Validate brochure pages
+    if (updateData.brochurePages && Number(updateData.brochurePages) > 150) {
+      return res.status(400).json({ success: false, message: 'Brochure limit is 150 pages' });
+    }
+
+    // If Coordinator: save changes to pendingUpdates
+    if (actor.role === 'coordinator') {
+      const updatedEvent = await prisma.event.update({
+        where: { id },
+        data: {
+          pendingUpdates: updateData
+        }
+      });
+      return res.status(200).json({
+        success: true,
+        message: 'Event updates submitted and pending Faculty Admin approval',
+        data: updatedEvent
+      });
+    }
+
+    // If Faculty Admin or Super Admin: direct update
+    const finalData = {};
+    if (updateData.title !== undefined) finalData.title = updateData.title;
+    if (updateData.description !== undefined) finalData.description = updateData.description;
+    if (updateData.eventDate !== undefined) finalData.eventDate = new Date(updateData.eventDate);
+    if (updateData.registrationDeadline !== undefined) finalData.registrationDeadline = new Date(updateData.registrationDeadline);
+    if (updateData.isPaid !== undefined) {
+      finalData.isPaid = !!updateData.isPaid;
+      finalData.entryFee = updateData.isPaid ? Number(updateData.entryFee || 0) : 0.00;
+      finalData.upiId = updateData.isPaid ? updateData.upiId : null;
+    }
+    if (updateData.branch !== undefined) finalData.branch = updateData.branch;
+    if (updateData.brochureUrl !== undefined) finalData.brochureUrl = updateData.brochureUrl;
+    if (updateData.brochurePages !== undefined) finalData.brochurePages = Number(updateData.brochurePages);
+    if (updateData.posterUrl1 !== undefined) finalData.posterUrl1 = updateData.posterUrl1;
+    if (updateData.posterUrl2 !== undefined) finalData.posterUrl2 = updateData.posterUrl2;
+    if (updateData.posterUrl3 !== undefined) finalData.posterUrl3 = updateData.posterUrl3;
+    if (updateData.posterUrl4 !== undefined) finalData.posterUrl4 = updateData.posterUrl4;
+    if (updateData.whatsAppGroupLink !== undefined) finalData.whatsAppGroupLink = updateData.whatsAppGroupLink;
+    if (updateData.eventType !== undefined) finalData.eventType = updateData.eventType;
+    if (updateData.minMembers !== undefined) finalData.minMembers = Number(updateData.minMembers);
+    if (updateData.maxMembers !== undefined) finalData.maxMembers = Number(updateData.maxMembers);
+
     const updatedEvent = await prisma.event.update({
       where: { id },
-      data: {
-        title: title || existingEvent.title,
-        description: description !== undefined ? description : existingEvent.description,
-        eventDate: eventDate ? new Date(eventDate) : existingEvent.eventDate,
-        registrationDeadline: registrationDeadline ? new Date(registrationDeadline) : existingEvent.registrationDeadline,
-        isPaid: isPaid !== undefined ? !!isPaid : existingEvent.isPaid,
-        entryFee: isPaid !== undefined ? (isPaid ? Number(entryFee) : 0.00) : existingEvent.entryFee,
-        upiId: isPaid !== undefined ? (isPaid ? upiId : null) : existingEvent.upiId
-      }
+      data: finalData
     });
 
-    // Write to audit log
-    await logAudit(
-      actor.id,
-      'UPDATE_EVENT',
-      'events',
-      id,
-      existingEvent,
-      updatedEvent
-    );
+    await logAudit(actor.id, 'UPDATE_EVENT', 'events', id, existingEvent, updatedEvent);
 
     res.status(200).json({
       success: true,
@@ -251,23 +309,222 @@ export const deleteEvent = async (req, res, next) => {
       });
     }
 
+    // If Coordinator: set pending deletion flag
+    if (actor.role === 'coordinator') {
+      const updatedEvent = await prisma.event.update({
+        where: { id },
+        data: {
+          isPendingDeletion: true
+        }
+      });
+      return res.status(200).json({
+        success: true,
+        message: 'Event deletion request submitted and pending Faculty Admin approval',
+        data: updatedEvent
+      });
+    }
+
+    // Direct delete for Faculty/Super Admin
     await prisma.event.delete({ where: { id } });
 
-    // Write to audit log
-    await logAudit(
-      actor.id,
-      'DELETE_EVENT',
-      'events',
-      id,
-      existingEvent,
-      null
-    );
+    await logAudit(actor.id, 'DELETE_EVENT', 'events', id, existingEvent, null);
 
     res.status(200).json({
       success: true,
       message: 'Event deleted successfully'
     });
 
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get pending event approvals (Updates or Deletions) for a College
+export const getPendingEventApprovals = async (req, res, next) => {
+  try {
+    const actor = req.user;
+    if (actor.role !== 'faculty_admin' && actor.role !== 'super_admin') {
+      return res.status(403).json({ success: false, message: 'Only faculty/super admins can view pending event approvals' });
+    }
+
+    const pending = await prisma.event.findMany({
+      where: {
+        collegeId: actor.role === 'super_admin' ? undefined : actor.collegeId,
+        OR: [
+          { isPendingDeletion: true },
+          { NOT: { pendingUpdates: null } }
+        ]
+      },
+      include: {
+        creator: {
+          select: { fullName: true }
+        }
+      },
+      orderBy: {
+        updatedAt: 'desc'
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      data: pending
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Approve proposed event updates
+export const approveEventUpdate = async (req, res, next) => {
+  const { id } = req.params;
+  try {
+    const actor = req.user;
+    if (actor.role !== 'faculty_admin' && actor.role !== 'super_admin') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    const event = await prisma.event.findUnique({ where: { id } });
+    if (!event || !event.pendingUpdates) {
+      return res.status(404).json({ success: false, message: 'Event or pending updates not found' });
+    }
+
+    if (actor.role !== 'super_admin' && event.collegeId !== actor.collegeId) {
+      return res.status(403).json({ success: false, message: 'Access denied: college mismatch' });
+    }
+
+    const updates = event.pendingUpdates;
+    const finalData = { pendingUpdates: null }; // clear pending updates
+
+    if (updates.title !== undefined) finalData.title = updates.title;
+    if (updates.description !== undefined) finalData.description = updates.description;
+    if (updates.eventDate !== undefined) finalData.eventDate = new Date(updates.eventDate);
+    if (updates.registrationDeadline !== undefined) finalData.registrationDeadline = new Date(updates.registrationDeadline);
+    if (updates.isPaid !== undefined) {
+      finalData.isPaid = !!updates.isPaid;
+      finalData.entryFee = updates.isPaid ? Number(updates.entryFee || 0) : 0.00;
+      finalData.upiId = updates.isPaid ? updates.upiId : null;
+    }
+    if (updates.branch !== undefined) finalData.branch = updates.branch;
+    if (updates.brochureUrl !== undefined) finalData.brochureUrl = updates.brochureUrl;
+    if (updates.brochurePages !== undefined) finalData.brochurePages = Number(updates.brochurePages);
+    if (updates.posterUrl1 !== undefined) finalData.posterUrl1 = updates.posterUrl1;
+    if (updates.posterUrl2 !== undefined) finalData.posterUrl2 = updates.posterUrl2;
+    if (updates.posterUrl3 !== undefined) finalData.posterUrl3 = updates.posterUrl3;
+    if (updates.posterUrl4 !== undefined) finalData.posterUrl4 = updates.posterUrl4;
+    if (updates.whatsAppGroupLink !== undefined) finalData.whatsAppGroupLink = updates.whatsAppGroupLink;
+    if (updates.eventType !== undefined) finalData.eventType = updates.eventType;
+    if (updates.minMembers !== undefined) finalData.minMembers = Number(updates.minMembers);
+    if (updates.maxMembers !== undefined) finalData.maxMembers = Number(updates.maxMembers);
+
+    const updatedEvent = await prisma.event.update({
+      where: { id },
+      data: finalData
+    });
+
+    await logAudit(actor.id, 'APPROVE_EVENT_UPDATE', 'events', id, event, updatedEvent);
+
+    res.status(200).json({
+      success: true,
+      message: 'Event updates approved and applied successfully',
+      data: updatedEvent
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Discard proposed event updates
+export const rejectEventUpdate = async (req, res, next) => {
+  const { id } = req.params;
+  try {
+    const actor = req.user;
+    if (actor.role !== 'faculty_admin' && actor.role !== 'super_admin') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    const event = await prisma.event.findUnique({ where: { id } });
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Event not found' });
+    }
+
+    if (actor.role !== 'super_admin' && event.collegeId !== actor.collegeId) {
+      return res.status(403).json({ success: false, message: 'Access denied: college mismatch' });
+    }
+
+    const updatedEvent = await prisma.event.update({
+      where: { id },
+      data: { pendingUpdates: null }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Pending updates discarded',
+      data: updatedEvent
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Approve deletion of event
+export const approveEventDelete = async (req, res, next) => {
+  const { id } = req.params;
+  try {
+    const actor = req.user;
+    if (actor.role !== 'faculty_admin' && actor.role !== 'super_admin') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    const event = await prisma.event.findUnique({ where: { id } });
+    if (!event || !event.isPendingDeletion) {
+      return res.status(404).json({ success: false, message: 'Event or pending deletion request not found' });
+    }
+
+    if (actor.role !== 'super_admin' && event.collegeId !== actor.collegeId) {
+      return res.status(403).json({ success: false, message: 'Access denied: college mismatch' });
+    }
+
+    await prisma.event.delete({ where: { id } });
+
+    await logAudit(actor.id, 'APPROVE_EVENT_DELETE', 'events', id, event, null);
+
+    res.status(200).json({
+      success: true,
+      message: 'Event deletion request approved, event deleted'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Cancel deletion request of event
+export const rejectEventDelete = async (req, res, next) => {
+  const { id } = req.params;
+  try {
+    const actor = req.user;
+    if (actor.role !== 'faculty_admin' && actor.role !== 'super_admin') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    const event = await prisma.event.findUnique({ where: { id } });
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Event not found' });
+    }
+
+    if (actor.role !== 'super_admin' && event.collegeId !== actor.collegeId) {
+      return res.status(403).json({ success: false, message: 'Access denied: college mismatch' });
+    }
+
+    const updatedEvent = await prisma.event.update({
+      where: { id },
+      data: { isPendingDeletion: false }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Event deletion request rejected',
+      data: updatedEvent
+    });
   } catch (error) {
     next(error);
   }
