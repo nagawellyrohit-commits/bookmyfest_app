@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 class AuthService {
   // Use localhost:5001 for Web/iOS Simulator.
@@ -258,6 +259,37 @@ class AuthService {
         return responseData;
       }
       throw Exception(responseData['message'] ?? 'Failed to update profile');
+    } catch (e) {
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
+    }
+  }
+
+  // Upload a PDF file to the backend
+  Future<String> uploadPdf(List<int> fileBytes, String fileName) async {
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse("$baseUrl/auth/upload"),
+      );
+
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          fileBytes,
+          filename: fileName,
+          contentType: MediaType('application', 'pdf'),
+        ),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        return responseData['fileUrl'];
+      } else {
+        throw Exception(responseData['message'] ?? 'Failed to upload PDF');
+      }
     } catch (e) {
       throw Exception(e.toString().replaceAll("Exception: ", ""));
     }

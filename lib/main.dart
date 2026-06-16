@@ -5,14 +5,19 @@ import 'screens/home_screen.dart';
 import 'screens/students_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/welcome_screen.dart';
+import 'screens/dashboard_screen.dart';
 
 import 'providers/user_provider.dart';
 import 'theme/app_theme.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final userProvider = UserProvider();
+  await userProvider.loadSessionFromPrefs();
+
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => UserProvider(),
+    ChangeNotifierProvider.value(
+      value: userProvider,
       child: const MyApp(),
     ),
   );
@@ -23,11 +28,12 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final userProvider = Provider.of<UserProvider>(context);
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'CollegeConnect',
       theme: AppTheme.themeData,
-      home: const WelcomeScreen(),
+      home: userProvider.isLoggedIn ? const DashboardScreen() : const WelcomeScreen(),
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
 import '../theme/app_theme.dart';
 import '../providers/user_provider.dart';
 import '../services/auth_service.dart';
@@ -16,6 +17,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _authService = AuthService();
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _isUploadingResume = false;
+  String? _uploadedResumeName;
 
   final _fullNameController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -141,6 +144,73 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _pickAndUploadResume() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+        withData: true,
+      );
+
+      if (result == null) return;
+
+      final file = result.files.single;
+      final fileBytes = file.bytes;
+      final fileName = file.name;
+
+      if (fileBytes == null) {
+        throw Exception("Could not read file data. Please try another PDF.");
+      }
+
+      // Strict 15MB size limit validation on client
+      const maxLimit = 15 * 1024 * 1024;
+      if (fileBytes.length > maxLimit) {
+        throw Exception("File size exceeds 15MB limit. Please choose a smaller PDF.");
+      }
+
+      // Strict PDF extension validation on client
+      if (!fileName.toLowerCase().endsWith('.pdf')) {
+        throw Exception("Only PDF format (.pdf) files are allowed!");
+      }
+
+      setState(() {
+        _isUploadingResume = true;
+      });
+
+      // Upload file to server
+      final fileUrl = await _authService.uploadPdf(fileBytes, fileName);
+
+      setState(() {
+        _resumeController.text = fileUrl;
+        _uploadedResumeName = fileName;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("PDF CV uploaded successfully!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll("Exception: ", "")),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingResume = false;
+        });
+      }
     }
   }
 
@@ -274,15 +344,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             ),
                             const SizedBox(height: 16),
                             TextFormField(
-                              controller: _resumeController,
-                              style: const TextStyle(color: AppTheme.textPrimary),
-                              decoration: AppTheme.inputDecoration(
-                                labelText: "Resume/CV Link (PDF Format)",
-                                prefixIcon: Icons.picture_as_pdf_outlined,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            TextFormField(
                               controller: _websiteUrlController,
                               style: const TextStyle(color: AppTheme.textPrimary),
                               decoration: AppTheme.inputDecoration(
@@ -326,6 +387,87 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 prefixIcon: Icons.calendar_today_outlined,
                               ),
                             ),
+                            const SizedBox(height: 16),
+                            // CV PDF Upload UI
+                            _isUploadingResume
+                                ? const Center(
+                                    child: Padding(
+                                      padding: EdgeInsets.symmetric(vertical: 8.0),
+                                      child: CircularProgressIndicator(color: AppTheme.primary),
+                                    ),
+                                  )
+                                : Container(
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.surface,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: const Color(0xFF334155), width: 1),
+                                    ),
+                                    child: InkWell(
+                                      onTap: _pickAndUploadResume,
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 20,
+                                          vertical: 16,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.picture_as_pdf_outlined,
+                                              color: _resumeController.text.isNotEmpty
+                                                  ? Colors.green
+                                                  : AppTheme.primary,
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    _uploadedResumeName != null
+                                                        ? "Selected: $_uploadedResumeName"
+                                                        : (_resumeController.text.isNotEmpty
+                                                            ? "Resume Uploaded"
+                                                            : "Upload CV PDF (Max 15MB, PDF Only)"),
+                                                    style: TextStyle(
+                                                      color: _resumeController.text.isNotEmpty
+                                                          ? Colors.green
+                                                          : AppTheme.textPrimary,
+                                                      fontWeight: _resumeController.text.isNotEmpty
+                                                          ? FontWeight.bold
+                                                          : FontWeight.normal,
+                                                      fontSize: 14,
+                                                    ),
+                                                  ),
+                                                  if (_resumeController.text.isNotEmpty)
+                                                    const SizedBox(height: 2),
+                                                  if (_resumeController.text.isNotEmpty)
+                                                    const Text(
+                                                      "Tap to replace the file",
+                                                      style: TextStyle(
+                                                        color: AppTheme.textSecondary,
+                                                        fontSize: 11,
+                                                      ),
+                                                    ),
+                                                ],
+                                              ),
+                                            ),
+                                            if (_resumeController.text.isNotEmpty)
+                                              const Icon(
+                                                Icons.check_circle,
+                                                color: Colors.green,
+                                              )
+                                            else
+                                              const Icon(
+                                                Icons.upload_file_outlined,
+                                                color: AppTheme.textSecondary,
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                           ],
                         ),
                       ),

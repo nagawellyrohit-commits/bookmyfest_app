@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import fs from 'fs';
 import authRoutes from './routes/authRoutes.js';
 import eventRoutes from './routes/eventRoutes.js';
 import registrationRoutes from './routes/registrationRoutes.js';
@@ -7,11 +8,17 @@ import attendanceRoutes from './routes/attendanceRoutes.js';
 import certificateRoutes from './routes/certificateRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 
+// Ensure uploads directory exists
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads');
+}
+
 const app = express();
 
 // Standard middleware
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static('uploads'));
 
 // Root health API
 app.get('/api/health', (req, res) => {

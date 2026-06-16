@@ -2,6 +2,8 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/db.js';
 import { sendEmailNotification, sendWhatsAppNotification } from '../utils/notifications.js';
+import multer from 'multer';
+import path from 'path';
 
 // Register a new user
 export const register = async (req, res, next) => {
@@ -523,6 +525,63 @@ export const updateProfile = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+// Multer Storage Configuration
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+// Multer Upload Setup
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB file size limit
+  fileFilter: (req, file, cb) => {
+    const filetypes = /pdf/;
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+
+    if (extname) {
+      return cb(null, true);
+    }
+    cb(new Error('Only PDF format (.pdf) files are allowed!'));
+  }
+}).single('file');
+
+// Export uploadFile controller
+export const uploadFile = (req, res, next) => {
+  upload(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({
+          success: false,
+          message: 'File is too large. Maximum size allowed is 15MB.'
+        });
+      }
+      return res.status(400).json({ success: false, message: err.message });
+    } else if (err) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Please select a PDF file to upload.' });
+    }
+
+    // Dynamic host-based static link resolution
+    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+
+    res.status(200).json({
+      success: true,
+      message: 'PDF CV uploaded successfully',
+      fileUrl: fileUrl,
+      fileName: req.file.originalname
+    });
+  });
 };
 
 

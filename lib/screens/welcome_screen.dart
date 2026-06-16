@@ -8,157 +8,391 @@ class WelcomeScreen extends StatefulWidget {
   State<WelcomeScreen> createState() => _WelcomeScreenState();
 }
 
-class _WelcomeScreenState extends State<WelcomeScreen> {
-  final String _instituteName = "BookmyFest";
-  final String _subtitle = "Your ultimate fest companion!";
-  final Color _brandColor = const Color.fromARGB(255, 214, 52, 106);
+class _WelcomeScreenState extends State<WelcomeScreen>
+    with TickerProviderStateMixin {
+  final String _instituteName = "bookmyfest";
+  final String _title = "Your Campus Events \nAll in One Place.";
+  final String _subtitle = "Discover • Book • Celebrate";
+  final Color _brandColor = const Color(0xffED1383);
+
+  late final AnimationController _controller;
+  late final AnimationController _shakeController;
+  late final AnimationController _zoomController;
+
+  late final Animation<double> _buttonScaleAnimation;
+  late final Animation<int> _textCharCountAnimation;
+  late final Animation<double> _iconPopAnimation;
+  late final Animation<double> _shakeAnimation;
+  late final Animation<double> _zoomScaleAnimation;
+  late final Animation<double> _zoomOpacityAnimation;
+
+  bool _isNavigating = false;
+  bool _isImageLoaded = false;
+  bool _isPreloading = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // 1. Entry Animation
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    );
+
+    // Button scales up in place with a bounce
+    _buttonScaleAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.0, 0.4, curve: Curves.easeOutBack),
+    );
+
+    // Text characters reveal one by one
+    _textCharCountAnimation = IntTween(begin: 0, end: 11).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.35, 0.8, curve: Curves.easeOut),
+      ),
+    );
+
+    // Pop the icon elastically after the text is fully typed
+    _iconPopAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.8, 1.0, curve: Curves.elasticOut),
+    );
+
+    // 2. Shake Animation
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+
+    _shakeAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 0.0,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeOut)),
+        weight: 1,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 1.0,
+          end: -1.0,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 2,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: -1.0,
+          end: 0.0,
+        ).chain(CurveTween(curve: Curves.easeIn)),
+        weight: 1,
+      ),
+    ]).animate(_shakeController);
+
+    // Start shaking after the entry animation finishes
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed && !_isNavigating) {
+        _shakeController.repeat();
+      }
+    });
+
+    // 3. Zoom Animation
+    _zoomController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+
+    _zoomScaleAnimation = Tween<double>(begin: 1.0, end: 1.35).animate(
+      CurvedAnimation(parent: _zoomController, curve: Curves.easeOutCubic),
+    );
+
+    _zoomOpacityAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _zoomController, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _preloadImages();
+  }
+
+  Future<void> _preloadImages() async {
+    if (_isPreloading) return;
+    _isPreloading = true;
+    try {
+      await Future.wait([
+        precacheImage(const AssetImage('assets/images/welcome.png'), context),
+        precacheImage(const AssetImage('assets/images/Logo.png'), context),
+      ]);
+    } catch (e) {
+      // Ignore image preloading failures to prevent freezing the app
+    }
+    if (mounted) {
+      setState(() {
+        _isImageLoaded = true;
+      });
+      _controller.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _shakeController.dispose();
+    _zoomController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(18, 242, 85, 61),
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // 1. Chevron background lines
+          // 1. Background Image
           Positioned.fill(
-            child: CustomPaint(painter: BackgroundChevronPainter()),
+            child: Image.asset('assets/images/welcome.png', fit: BoxFit.cover),
           ),
 
-          // 2. City Silhouette at bottom
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: MediaQuery.of(context).size.height * 0.24,
-            child: CustomPaint(painter: BuildingSilhouettePainter()),
-          ),
+          // 2. Main content area
+          if (_isImageLoaded)
+            SafeArea(
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Center(
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Logo from assets
+                            Image.asset(
+                              'assets/images/Logo.png',
+                              width: 140,
+                              height: 140,
+                              fit: BoxFit.contain,
+                            ),
+                            const SizedBox(height: 2),
 
-          // 3. Main content area
-          SafeArea(
-            child: Column(
-              children: [
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Logo from assets
-                      Image.asset(
-                        'assets/images/Logo.png',
-                        width: 180,
-                        height: 180,
-                        fit: BoxFit.contain,
-                      ),
-                      const SizedBox(height: 16),
+                            // Institute Name
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
+                              child: Text.rich(
+                                const TextSpan(
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -0.5,
+                                  ),
+                                  children: [
+                                    TextSpan(
+                                      text: "bookmy",
+                                      style: TextStyle(
+                                        color: Color(0xffED1383),
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: "fest",
+                                      style: TextStyle(
+                                        color: Color(0xff9708AA),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
 
-                      // Institute Name
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Text(
-                          _instituteName,
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w900,
-                            color: _brandColor,
-                            letterSpacing: -0.5,
-                          ),
-                          textAlign: TextAlign.center,
+                            // Title
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
+                              child: Text(
+                                _title,
+                                style: const TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color.fromARGB(255, 13, 13, 13),
+                                  height: 1.25,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+
+                            // Subtitle
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
+                              child: Text(
+                                _subtitle,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFFE5A93B),
+                                  letterSpacing: 0.5,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 6),
-
-                      // Subtitle
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Text(
-                          _subtitle,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF64748B),
-                            letterSpacing: 0.1,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Action Button area (above building illustration)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 24,
-                  ),
-                  child: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          _brandColor,
-                          _brandColor.withValues(alpha: 0.8),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: _brandColor.withValues(alpha: 0.4),
-                          blurRadius: 15,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
                     ),
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(
+                  ),
+
+                  // Action Button area
+                  AnimatedBuilder(
+                    animation: Listenable.merge([
+                      _controller,
+                      _shakeController,
+                      _zoomController,
+                    ]),
+                    builder: (context, child) {
+                      final val = _buttonScaleAnimation.value;
+                      final zoomScale = _zoomScaleAnimation.value;
+                      final zoomOpacity = _zoomOpacityAnimation.value;
+                      final shakeVal = _shakeAnimation.value;
+
+                      return Transform.scale(
+                        scale: val * zoomScale,
+                        child: Opacity(
+                          opacity: (val.clamp(0.0, 1.0) * zoomOpacity).clamp(
+                            0.0,
+                            1.0,
+                          ),
+                          child: Transform.translate(
+                            offset: Offset(shakeVal * 5.0, 0.0),
+                            child: Transform.rotate(
+                              angle: shakeVal * 0.02,
+                              child: child,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 24,
+                      ),
+                      child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              _brandColor,
+                              _brandColor.withValues(alpha: 0.8),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
                           borderRadius: BorderRadius.circular(18),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _brandColor.withValues(alpha: 0.4),
+                              blurRadius: 15,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
                         ),
-                      ),
-                      onPressed: () {
-                        // Navigate to SelectLoginScreen
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => SelectLoginScreen(
-                              brandColor: _brandColor,
-                              instituteName: _instituteName,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
                             ),
                           ),
-                        );
-                      },
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            "Get Started",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+                          onPressed: () async {
+                            if (_isNavigating || !_controller.isCompleted) {
+                              return;
+                            }
+
+                            setState(() {
+                              _isNavigating = true;
+                            });
+
+                            // Stop shake immediately and reset to center
+                            _shakeController.stop();
+                            _shakeController.reset();
+
+                            // Play zoom scale-up and fade-out animation
+                            await _zoomController.forward();
+
+                            if (!context.mounted) return;
+
+                            // Navigate to SelectLoginScreen
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SelectLoginScreen(
+                                  brandColor: _brandColor,
+                                  instituteName: _instituteName,
+                                ),
+                              ),
+                            );
+
+                            // Once returned from SelectLoginScreen:
+                            // Reset zoom, reset navigation state, and restart shake
+                            _zoomController.reset();
+                            setState(() {
+                              _isNavigating = false;
+                            });
+                            _shakeController.repeat();
+                          },
+                          child: AnimatedBuilder(
+                            animation: _textCharCountAnimation,
+                            builder: (context, child) {
+                              final count = _textCharCountAnimation.value;
+                              final visibleText = "Get Started".substring(
+                                0,
+                                count,
+                              );
+                              return Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    visibleText,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ScaleTransition(
+                                    scale: _iconPopAnimation,
+                                    child: const Icon(
+                                      Icons.arrow_forward,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
-                          SizedBox(width: 8),
-                          Icon(
-                            Icons.arrow_forward,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
-                ),
 
-                // Offset padding to clear building heights
-                SizedBox(height: MediaQuery.of(context).size.height * 0.12),
-              ],
+                  // Offset padding to raise the button above bottom illustrations/icons
+                  const SizedBox(height: 95),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );

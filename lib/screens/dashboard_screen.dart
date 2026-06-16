@@ -1,13 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../providers/user_provider.dart';
 import '../services/event_service.dart';
 import '../services/auth_service.dart';
 import 'event_detail_screen.dart';
-import 'login_screen.dart';
 import 'edit_profile_screen.dart';
+import 'welcome_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -27,7 +28,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<dynamic> _jobProfiles = [];
   List<dynamic> _pendingCoordinators = [];
   List<dynamic> _pendingEventApprovals = [];
-  List<dynamic> _pendingFaculties = [];
+  List<dynamic> _allStudents = [];
+  List<dynamic> _allFaculties = [];
+  List<dynamic> _allCoordinators = [];
 
   // Search and Filters
   String _searchQuery = "";
@@ -98,8 +101,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       // 2. Fetch Job Profiles for Super Admin
       List<dynamic> fetchedProfiles = [];
+      List<dynamic> fetchedAllStudents = [];
+      List<dynamic> fetchedAllFaculties = [];
+      List<dynamic> fetchedAllCoordinators = [];
       if (role == 'super_admin') {
-        fetchedProfiles = await _eventService.getJobProfiles(token);
+        fetchedProfiles = await _eventService.getAllJobProfiles(token);
+        fetchedAllStudents = await _eventService.getAllStudents(token);
+        fetchedAllFaculties = await _eventService.getAllFaculties(token);
+        fetchedAllCoordinators = await _eventService.getAllCoordinators(token);
       }
 
       // 3. Fetch Pending Coordinators for Faculty Admin
@@ -116,19 +125,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       }
 
-      // 5. Fetch Pending Faculty Admins for Super Admin
-      List<dynamic> fetchedFaculties = [];
-      if (role == 'super_admin') {
-        fetchedFaculties = await _authService.getPendingFaculties(token);
-      }
-
       if (mounted) {
         setState(() {
           _events = fetchedEvents;
           _jobProfiles = fetchedProfiles;
           _pendingCoordinators = fetchedPending;
           _pendingEventApprovals = fetchedEventApprovals;
-          _pendingFaculties = fetchedFaculties;
+          _allStudents = fetchedAllStudents;
+          _allFaculties = fetchedAllFaculties;
+          _allCoordinators = fetchedAllCoordinators;
         });
       }
     } catch (e) {
@@ -148,9 +153,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Logout handler
   void _logout() {
     Provider.of<UserProvider>(context, listen: false).logout();
-    Navigator.pushReplacement(
+    Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
+      MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+      (route) => false,
     );
   }
 
@@ -483,16 +489,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
         onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
         destinations: const [
           NavigationDestination(
+            icon: Icon(Icons.people_outline),
+            label: "Students",
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.group_work_outlined),
+            label: "Coordinators",
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_pin_outlined),
+            label: "Faculty",
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.event_note_outlined),
+            label: "Events",
+          ),
+          NavigationDestination(
             icon: Icon(Icons.work_outline_rounded),
             label: "Job Profiles",
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.verified_user_rounded),
-            label: "Verify Faculty",
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.language_rounded),
-            label: "All Events Overview",
           ),
         ],
       );
@@ -535,11 +549,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } else if (role == 'super_admin') {
       switch (_currentIndex) {
         case 0:
-          return _buildSuperAdminJobProfilesTab(user);
+          return _buildSuperAdminStudentsTab(user);
         case 1:
-          return _buildSuperAdminVerifyFacultiesTab(user);
+          return _buildSuperAdminCoordinatorsTab(user);
         case 2:
+          return _buildSuperAdminFacultiesTab(user);
+        case 3:
           return _buildEventsTab(isStudentView: false, isSuperAdminView: true);
+        case 4:
+          return _buildSuperAdminJobProfilesTab(user);
       }
     }
     return const Center(child: Text("Unknown Role Page"));
@@ -1163,6 +1181,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     String label,
     String value, {
     Color? color,
+    VoidCallback? onTap,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -1171,17 +1190,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Icon(icon, size: 20, color: AppTheme.textSecondary),
           const SizedBox(width: 12),
           Text(
-            "$label: ",
-            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+             "$label: ",
+             style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
           ),
           Expanded(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                color: color ?? AppTheme.textPrimary,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
+            child: GestureDetector(
+              onTap: onTap,
+              child: Text(
+                value,
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  color: color ?? AppTheme.textPrimary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  decoration: onTap != null ? TextDecoration.underline : null,
+                ),
               ),
             ),
           ),
@@ -1513,7 +1536,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // Super Admin job profile lists
+  // Super Admin view ALL job profiles (regardless of passing/final year status)
   Widget _buildSuperAdminJobProfilesTab(UserProvider user) {
     if (_jobProfiles.isEmpty) {
       return Center(
@@ -1543,8 +1566,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
       padding: const EdgeInsets.all(20),
       itemCount: _jobProfiles.length,
       itemBuilder: (context, index) {
-        final profile = _jobProfiles[index];
-        final resume = profile['jobProfile']?['resumeUrl'] ?? 'No link';
+        final jp = _jobProfiles[index];
+        final student = jp['user'] ?? {};
+        final resume = jp['resumeUrl'] ?? 'No link';
+        final branch = jp['branch'] ?? 'N/A';
+        final passingYear = jp['passingYear']?.toString() ?? 'N/A';
+        final businessName = jp['businessName'];
+        final description = jp['description'];
+        final contactPhone = jp['contactPhone'];
+        final websiteUrl = jp['websiteUrl'];
+        final instagramUrl = jp['instagramUrl'];
+        final linkedinUrl = jp['linkedinUrl'];
 
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
@@ -1556,44 +1588,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    profile['fullName'],
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Text(
-                      "FINAL YEAR",
-                      style: TextStyle(
-                        color: AppTheme.primary,
-                        fontSize: 10,
+                  Expanded(
+                    child: Text(
+                      student['fullName'] ?? 'Unknown Student',
+                      style: const TextStyle(
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
                       ),
                     ),
                   ),
+                  if (student['isFinalYear'] == true)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        "FINAL YEAR",
+                        style: TextStyle(
+                          color: AppTheme.primary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                 ],
               ),
               const SizedBox(height: 4),
               Text(
-                "College: ${profile['college']?['name'] ?? 'N/A'}",
+                "College: ${student['college']?['name'] ?? 'N/A'}",
                 style: const TextStyle(
                   color: AppTheme.textSecondary,
                   fontSize: 13,
                 ),
               ),
               Text(
-                "Dept: ${profile['department'] ?? 'N/A'}",
+                "Dept: ${student['department'] ?? 'N/A'}",
                 style: const TextStyle(
                   color: AppTheme.textSecondary,
                   fontSize: 13,
@@ -1604,18 +1639,122 @@ class _DashboardScreenState extends State<DashboardScreen> {
               _profileDetailItem(
                 Icons.email_outlined,
                 "Email",
-                profile['email'],
+                student['email'] ?? 'N/A',
               ),
               _profileDetailItem(
                 Icons.phone_outlined,
                 "Phone",
-                profile['phone'] ?? 'N/A',
+                student['phone'] ?? 'N/A',
               ),
               _profileDetailItem(
+                Icons.school_outlined,
+                "Branch / Field",
+                branch,
+              ),
+              _profileDetailItem(
+                Icons.calendar_today_outlined,
+                "Passing Out Year",
+                passingYear,
+              ),
+
+              if (businessName != null && businessName.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                const Text(
+                  "Startup / Company Info",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _profileDetailItem(
+                  Icons.business_center_outlined,
+                  "Company Name",
+                  businessName,
+                ),
+                if (description != null && description.isNotEmpty)
+                  _profileDetailItem(
+                    Icons.description_outlined,
+                    "Description",
+                    description,
+                  ),
+                if (contactPhone != null && contactPhone.isNotEmpty)
+                  _profileDetailItem(
+                    Icons.phone_android_outlined,
+                    "Business Phone",
+                    contactPhone,
+                  ),
+              ],
+
+              if ((websiteUrl != null && websiteUrl.isNotEmpty) ||
+                  (instagramUrl != null && instagramUrl.isNotEmpty) ||
+                  (linkedinUrl != null && linkedinUrl.isNotEmpty)) ...[
+                const SizedBox(height: 8),
+                const Text(
+                  "Professional Links",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (websiteUrl != null && websiteUrl.isNotEmpty)
+                  _profileDetailItem(
+                    Icons.web_outlined,
+                    "Website",
+                    websiteUrl,
+                    color: Colors.blue,
+                    onTap: () async {
+                      final url = Uri.parse(websiteUrl);
+                      if (await canLaunchUrl(url)) {
+                        await launchUrl(url, mode: LaunchMode.externalApplication);
+                      }
+                    },
+                  ),
+                if (instagramUrl != null && instagramUrl.isNotEmpty)
+                  _profileDetailItem(
+                    Icons.camera_alt_outlined,
+                    "Instagram",
+                    instagramUrl,
+                    color: Colors.pinkAccent,
+                    onTap: () async {
+                      final url = Uri.parse(instagramUrl);
+                      if (await canLaunchUrl(url)) {
+                        await launchUrl(url, mode: LaunchMode.externalApplication);
+                      }
+                    },
+                  ),
+                if (linkedinUrl != null && linkedinUrl.isNotEmpty)
+                  _profileDetailItem(
+                    Icons.link_outlined,
+                    "LinkedIn",
+                    linkedinUrl,
+                    color: Colors.blueAccent,
+                    onTap: () async {
+                      final url = Uri.parse(linkedinUrl);
+                      if (await canLaunchUrl(url)) {
+                        await launchUrl(url, mode: LaunchMode.externalApplication);
+                      }
+                    },
+                  ),
+              ],
+
+              const SizedBox(height: 8),
+              _profileDetailItem(
                 Icons.picture_as_pdf_outlined,
-                "Resume CV Link",
-                resume,
-                color: Colors.blue,
+                "Resume CV PDF",
+                resume != 'No link' && resume != 'No resume link provided' ? "Click to view PDF CV" : "No resume uploaded",
+                color: resume != 'No link' && resume != 'No resume link provided' ? Colors.blue : AppTheme.textSecondary,
+                onTap: resume != 'No link' && resume != 'No resume link provided'
+                    ? () async {
+                        final url = Uri.parse(resume);
+                        if (await canLaunchUrl(url)) {
+                          await launchUrl(url, mode: LaunchMode.externalApplication);
+                        }
+                      }
+                    : null,
               ),
             ],
           ),
@@ -1843,21 +1982,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // Super Admin view to approve pending Faculty Admin accounts
-  Widget _buildSuperAdminVerifyFacultiesTab(UserProvider user) {
-    if (_pendingFaculties.isEmpty) {
+  // Super Admin view all student accounts
+  Widget _buildSuperAdminStudentsTab(UserProvider user) {
+    if (_allStudents.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(
-              Icons.verified_user_outlined,
+              Icons.people_outline,
               size: 60,
               color: AppTheme.textSecondary,
             ),
             const SizedBox(height: 16),
             const Text(
-              "No Pending Faculty Approvals",
+              "No Students Registered",
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -1868,12 +2007,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       );
     }
-
     return ListView.builder(
       padding: const EdgeInsets.all(20),
-      itemCount: _pendingFaculties.length,
-      itemBuilder: (_, index) {
-        final faculty = _pendingFaculties[index];
+      itemCount: _allStudents.length,
+      itemBuilder: (context, index) {
+        final student = _allStudents[index];
+        final isVerified = student['isVerified'] ?? student['is_verified'] ?? false;
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
           padding: const EdgeInsets.all(20),
@@ -1881,72 +2020,253 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      student['fullName'] ?? 'Unknown Student',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: isVerified ? Colors.green.withValues(alpha: 0.15) : Colors.amber.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      isVerified ? "VERIFIED" : "PENDING",
+                      style: TextStyle(
+                        color: isVerified ? Colors.green : Colors.amber,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
               Text(
-                faculty['fullName'] ?? 'Unknown Faculty',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
-                ),
+                "College: ${student['college']?['name'] ?? 'N/A'}",
+                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+              ),
+              Text(
+                "Dept: ${student['department'] ?? 'N/A'}",
+                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              _profileDetailItem(Icons.email_outlined, "Email", student['email']),
+              _profileDetailItem(Icons.phone_outlined, "Phone", student['phone'] ?? 'N/A'),
+              if (student['studentId'] != null)
+                _profileDetailItem(Icons.card_membership, "Student ID", student['studentId']),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Super Admin view all coordinator accounts
+  Widget _buildSuperAdminCoordinatorsTab(UserProvider user) {
+    if (_allCoordinators.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.group_work_outlined,
+              size: 60,
+              color: AppTheme.textSecondary,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              "No Coordinators Registered",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(20),
+      itemCount: _allCoordinators.length,
+      itemBuilder: (context, index) {
+        final coordinator = _allCoordinators[index];
+        final isVerified = coordinator['isVerified'] ?? coordinator['is_verified'] ?? false;
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(20),
+          decoration: AppTheme.cardDecoration(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      coordinator['fullName'] ?? 'Unknown Coordinator',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: isVerified ? Colors.green.withValues(alpha: 0.15) : Colors.amber.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      isVerified ? "VERIFIED" : "PENDING",
+                      style: TextStyle(
+                        color: isVerified ? Colors.green : Colors.amber,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "College: ${coordinator['college']?['name'] ?? 'N/A'}",
+                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+              ),
+              Text(
+                "Dept: ${coordinator['department'] ?? 'N/A'}",
+                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              _profileDetailItem(Icons.email_outlined, "Email", coordinator['email']),
+              _profileDetailItem(Icons.phone_outlined, "Phone", coordinator['phone'] ?? 'N/A'),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Super Admin view all faculty accounts
+  Widget _buildSuperAdminFacultiesTab(UserProvider user) {
+    if (_allFaculties.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.person_pin_outlined,
+              size: 60,
+              color: AppTheme.textSecondary,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              "No Faculty Registered",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(20),
+      itemCount: _allFaculties.length,
+      itemBuilder: (context, index) {
+        final faculty = _allFaculties[index];
+        final isVerified = faculty['isVerified'] ?? faculty['is_verified'] ?? false;
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(20),
+          decoration: AppTheme.cardDecoration(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      faculty['fullName'] ?? 'Unknown Faculty',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: isVerified ? Colors.green.withValues(alpha: 0.15) : Colors.amber.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      isVerified ? "VERIFIED" : "PENDING",
+                      style: TextStyle(
+                        color: isVerified ? Colors.green : Colors.amber,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 4),
               Text(
                 "College: ${faculty['college']?['name'] ?? 'N/A'}",
-                style: const TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontSize: 13,
-                ),
+                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
               ),
               Text(
                 "Dept: ${faculty['department'] ?? 'N/A'}",
-                style: const TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontSize: 13,
-                ),
+                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
               ),
               const SizedBox(height: 12),
-              _profileDetailItem(
-                Icons.email_outlined,
-                "Email",
-                faculty['email'],
-              ),
-              _profileDetailItem(
-                Icons.phone_outlined,
-                "Phone",
-                faculty['phone'] ?? 'N/A',
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(50),
-                  backgroundColor: AppTheme.primary,
+              _profileDetailItem(Icons.email_outlined, "Email", faculty['email']),
+              _profileDetailItem(Icons.phone_outlined, "Phone", faculty['phone'] ?? 'N/A'),
+              if (!isVerified) ...[
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    minimumSize: const Size.fromHeight(45),
+                  ),
+                  onPressed: () async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    try {
+                      await _authService.verifyFaculty(user.token!, faculty['id']);
+                      if (!mounted) return;
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text("Faculty Admin approved successfully!"),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                      _fetchDashboardData();
+                    } catch (e) {
+                      if (!mounted) return;
+                      messenger.showSnackBar(
+                        SnackBar(content: Text("Error: $e"), backgroundColor: AppTheme.accent),
+                      );
+                    }
+                  },
+                  child: const Text("Approve Faculty Admin"),
                 ),
-                onPressed: () async {
-                  try {
-                    await _authService.verifyFaculty(
-                      user.token!,
-                      faculty['id'],
-                    );
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Faculty Admin approved successfully!"),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                    _fetchDashboardData();
-                  } catch (e) {
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text("Error: $e"),
-                        backgroundColor: AppTheme.accent,
-                      ),
-                    );
-                  }
-                },
-                child: const Text("Approve Faculty Admin"),
-              ),
+              ],
             ],
           ),
         );

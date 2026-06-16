@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import '../services/auth_service.dart';
+import 'welcome_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   final String? initialRole;
@@ -32,10 +34,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _authService = AuthService();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _isUploadingResume = false;
+  String? _uploadedResumeName;
 
   late String _selectedRole;
 
-  final Color _brandColor = const Color(0xFFD30014); // Bennett Crimson Red
+  final Color _brandColor = const Color(0xffED1383);
 
   @override
   void initState() {
@@ -107,23 +111,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
         contactPhone: isStudent && _contactPhoneController.text.isNotEmpty
             ? _contactPhoneController.text
             : null,
-        websiteUrl:
-            isStudent && _websiteUrlController.text.isNotEmpty
+        websiteUrl: isStudent && _websiteUrlController.text.isNotEmpty
             ? _websiteUrlController.text
             : null,
-        instagramUrl:
-            isStudent && _instagramUrlController.text.isNotEmpty
+        instagramUrl: isStudent && _instagramUrlController.text.isNotEmpty
             ? _instagramUrlController.text
             : null,
-        linkedinUrl:
-            isStudent && _linkedinUrlController.text.isNotEmpty
+        linkedinUrl: isStudent && _linkedinUrlController.text.isNotEmpty
             ? _linkedinUrlController.text
             : null,
         branch: isStudent && _branchController.text.isNotEmpty
             ? _branchController.text
             : null,
-        passingYear:
-            isStudent && _passingYearController.text.isNotEmpty
+        passingYear: isStudent && _passingYearController.text.isNotEmpty
             ? int.tryParse(_passingYearController.text)
             : null,
       );
@@ -216,6 +216,73 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  Future<void> _pickAndUploadResume() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+        withData: true,
+      );
+
+      if (result == null) return;
+
+      final file = result.files.single;
+      final fileBytes = file.bytes;
+      final fileName = file.name;
+
+      if (fileBytes == null) {
+        throw Exception("Could not read file data. Please try another PDF.");
+      }
+
+      // Strict 15MB size limit validation on client
+      const maxLimit = 15 * 1024 * 1024;
+      if (fileBytes.length > maxLimit) {
+        throw Exception("File size exceeds 15MB limit. Please choose a smaller PDF.");
+      }
+
+      // Strict PDF extension validation on client
+      if (!fileName.toLowerCase().endsWith('.pdf')) {
+        throw Exception("Only PDF format (.pdf) files are allowed!");
+      }
+
+      setState(() {
+        _isUploadingResume = true;
+      });
+
+      // Upload file to server
+      final fileUrl = await _authService.uploadPdf(fileBytes, fileName);
+
+      setState(() {
+        _resumeController.text = fileUrl;
+        _uploadedResumeName = fileName;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("PDF CV uploaded successfully!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll("Exception: ", "")),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingResume = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isSuperAdmin = _selectedRole == 'super_admin';
@@ -232,432 +299,548 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+              );
+            }
+          },
         ),
       ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Header text
-                  Text(
-                    "Register as ${_getRoleDisplayName()}",
-                    style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF0F172A),
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    "Provide your credentials to establish your profile",
-                    style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
-                  ),
-                  const SizedBox(height: 30),
-
-                  // Forms wrapper
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: const Color(0xFFE2E8F0),
-                        width: 1.2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.03),
-                          blurRadius: 15,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Full Name
-                        TextFormField(
-                          controller: _fullNameController,
-                          style: const TextStyle(color: Color(0xFF1E293B)),
-                          decoration: _lightInputDecoration(
-                            labelText: "Full Name",
-                            prefixIcon: Icons.person_outline,
-                          ),
-                          validator: (val) {
-                            if (val == null || val.isEmpty) {
-                              return "Please enter your name";
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Email
-                        TextFormField(
-                          controller: _emailController,
-                          style: const TextStyle(color: Color(0xFF1E293B)),
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: _lightInputDecoration(
-                            labelText: "Email Address",
-                            prefixIcon: Icons.email_outlined,
-                          ),
-                          validator: (val) {
-                            if (val == null || val.isEmpty) {
-                              return "Please enter your email";
-                            }
-                            if (!val.contains("@")) {
-                              return "Invalid email address";
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Password
-                        TextFormField(
-                          controller: _passwordController,
-                          style: const TextStyle(color: Color(0xFF1E293B)),
-                          obscureText: _obscurePassword,
-                          decoration: _lightInputDecoration(
-                            labelText: "Password",
-                            prefixIcon: Icons.lock_outline,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                color: const Color(0xFF94A3B8),
-                              ),
-                              onPressed: () {
-                                setState(
-                                  () => _obscurePassword = !_obscurePassword,
-                                );
-                              },
-                            ),
-                          ),
-                          validator: (val) {
-                            if (val == null || val.isEmpty) {
-                              return "Please enter a password";
-                            }
-                            if (val.length < 6) {
-                              return "Password must be at least 6 characters";
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Phone Number
-                        TextFormField(
-                          controller: _phoneController,
-                          style: const TextStyle(color: Color(0xFF1E293B)),
-                          keyboardType: TextInputType.phone,
-                          decoration: _lightInputDecoration(
-                            labelText: "Phone Number",
-                            prefixIcon: Icons.phone_outlined,
-                          ),
-                          validator: (val) {
-                            if (val == null || val.isEmpty) {
-                              return "Please enter your phone number";
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Student ID (Only for Student Role)
-                        if (isStudent) ...[
-                          TextFormField(
-                            controller: _studentIdController,
-                            style: const TextStyle(color: Color(0xFF1E293B)),
-                            decoration: _lightInputDecoration(
-                              labelText: "Student ID / Roll Number",
-                              prefixIcon: Icons.badge_outlined,
-                            ),
-                            validator: (val) {
-                              if (val == null || val.trim().isEmpty) {
-                                return "Please enter your Student ID";
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 20),
-                        ],
-
-                        // College Name (Only if NOT Super Admin)
-                        if (!isSuperAdmin) ...[
-                          TextFormField(
-                            controller: _collegeNameController,
-                            style: const TextStyle(color: Color(0xFF1E293B)),
-                            decoration: _lightInputDecoration(
-                              labelText: "College Name",
-                              prefixIcon: Icons.apartment_outlined,
-                            ),
-                            validator: (val) {
-                              if (val == null || val.isEmpty) {
-                                return "Please enter your college name";
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 20),
-
-                          TextFormField(
-                            controller: _departmentController,
-                            style: const TextStyle(color: Color(0xFF1E293B)),
-                            decoration: _lightInputDecoration(
-                              labelText: "Department / Major",
-                              prefixIcon: Icons.badge_outlined,
-                            ),
-                            validator: (val) {
-                              if (val == null || val.isEmpty) {
-                                return "Please enter your department";
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 20),
-
-                          // ID Proof Link (Optional)
-                          TextFormField(
-                            controller: _idProofController,
-                            style: const TextStyle(color: Color(0xFF1E293B)),
-                            decoration: _lightInputDecoration(
-                              labelText: _getIdProofLabel(),
-                              prefixIcon: Icons.attachment_outlined,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                        ],
-
-                        // Optional Job/Startup Profile (Students Only)
-                        if (isStudent) ...[
-                          Padding(
-                            padding: const EdgeInsets.only(top: 10),
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF8FAFC),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: _brandColor.withValues(alpha: 0.3),
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.stretch,
-                                children: [
-                                  Text(
-                                    "Job / Startup Profile (Optional)",
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: _brandColor,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  const Text(
-                                    "Note: Fill these details if you wish to share startup/job details.",
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Color(0xFF64748B),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  TextFormField(
-                                    controller: _businessNameController,
-                                    style: const TextStyle(
-                                      color: Color(0xFF1E293B),
-                                    ),
-                                    decoration: _lightInputDecoration(
-                                      labelText: "Business/Startup Name (Optional)",
-                                      prefixIcon: Icons.business_center_outlined,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  TextFormField(
-                                    controller: _descriptionController,
-                                    style: const TextStyle(
-                                      color: Color(0xFF1E293B),
-                                    ),
-                                    decoration: _lightInputDecoration(
-                                      labelText: "Description of what company does (Optional)",
-                                      prefixIcon: Icons.description_outlined,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  TextFormField(
-                                    controller: _contactPhoneController,
-                                    style: const TextStyle(
-                                      color: Color(0xFF1E293B),
-                                    ),
-                                    keyboardType: TextInputType.phone,
-                                    decoration: _lightInputDecoration(
-                                      labelText: "Business Contact Phone Number (Optional)",
-                                      prefixIcon: Icons.phone_android_outlined,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  TextFormField(
-                                    controller: _resumeController,
-                                    style: const TextStyle(
-                                      color: Color(0xFF1E293B),
-                                    ),
-                                    decoration: _lightInputDecoration(
-                                      labelText: "Resume/CV Link (PDF Format, Optional)",
-                                      prefixIcon: Icons.picture_as_pdf_outlined,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  TextFormField(
-                                    controller: _websiteUrlController,
-                                    style: const TextStyle(
-                                      color: Color(0xFF1E293B),
-                                    ),
-                                    decoration: _lightInputDecoration(
-                                      labelText: "Webpage Link (Optional)",
-                                      prefixIcon: Icons.web_outlined,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  TextFormField(
-                                    controller: _instagramUrlController,
-                                    style: const TextStyle(
-                                      color: Color(0xFF1E293B),
-                                    ),
-                                    decoration: _lightInputDecoration(
-                                      labelText: "Instagram Link (Optional)",
-                                      prefixIcon: Icons.camera_alt_outlined,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  TextFormField(
-                                    controller: _linkedinUrlController,
-                                    style: const TextStyle(
-                                      color: Color(0xFF1E293B),
-                                    ),
-                                    decoration: _lightInputDecoration(
-                                      labelText: "LinkedIn Link (Optional)",
-                                      prefixIcon: Icons.link_outlined,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  TextFormField(
-                                    controller: _branchController,
-                                    style: const TextStyle(
-                                      color: Color(0xFF1E293B),
-                                    ),
-                                    decoration: _lightInputDecoration(
-                                      labelText: "Branch/Field (Optional)",
-                                      prefixIcon: Icons.school_outlined,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  TextFormField(
-                                    controller: _passingYearController,
-                                    style: const TextStyle(
-                                      color: Color(0xFF1E293B),
-                                    ),
-                                    keyboardType: TextInputType.number,
-                                    decoration: _lightInputDecoration(
-                                      labelText: "Passing Out Year (Optional)",
-                                      prefixIcon: Icons.calendar_today_outlined,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                        ],
-
-                        const SizedBox(height: 10),
-
-                        // Sign Up Submit Button
-                        _isLoading
-                            ? Center(
-                                child: CircularProgressIndicator(
-                                  color: _brandColor,
-                                ),
-                              )
-                            : Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      _brandColor,
-                                      _brandColor.withValues(alpha: 0.85),
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: _brandColor.withValues(alpha: 0.3),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.transparent,
-                                    shadowColor: Colors.transparent,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 16,
-                                    ),
-                                  ),
-                                  onPressed: _register,
-                                  child: const Text(
-                                    "Create Account",
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Back to Login
-                  Row(
+      body: Stack(
+        children: [
+          // Background Image
+          Positioned.fill(
+            child: Image.asset('assets/images/signin.png', fit: BoxFit.cover),
+          ),
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 20,
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
-                        "Already have an account?",
-                        style: TextStyle(color: Color(0xFF64748B)),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        child: Text(
-                          "Sign In",
-                          style: TextStyle(
-                            color: _brandColor,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      // Header text
+                      Text(
+                        "Register as ${_getRoleDisplayName()}",
+                        style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0F172A),
+                          letterSpacing: -0.5,
                         ),
                       ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        "Provide your credentials to establish your profile",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+
+                      // Forms wrapper
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: const Color(0xFFE2E8F0),
+                            width: 1.2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 15,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Full Name
+                            TextFormField(
+                              controller: _fullNameController,
+                              style: const TextStyle(color: Color(0xFF1E293B)),
+                              decoration: _lightInputDecoration(
+                                labelText: "Full Name",
+                                prefixIcon: Icons.person_outline,
+                              ),
+                              validator: (val) {
+                                if (val == null || val.isEmpty) {
+                                  return "Please enter your name";
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 20),
+
+                            // Email
+                            TextFormField(
+                              controller: _emailController,
+                              style: const TextStyle(color: Color(0xFF1E293B)),
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: _lightInputDecoration(
+                                labelText: "Email Address",
+                                prefixIcon: Icons.email_outlined,
+                              ),
+                              validator: (val) {
+                                if (val == null || val.isEmpty) {
+                                  return "Please enter your email";
+                                }
+                                if (!val.contains("@")) {
+                                  return "Invalid email address";
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 20),
+
+                            // Password
+                            TextFormField(
+                              controller: _passwordController,
+                              style: const TextStyle(color: Color(0xFF1E293B)),
+                              obscureText: _obscurePassword,
+                              decoration: _lightInputDecoration(
+                                labelText: "Password",
+                                prefixIcon: Icons.lock_outline,
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscurePassword
+                                        ? Icons.visibility_off_outlined
+                                        : Icons.visibility_outlined,
+                                    color: const Color(0xFF94A3B8),
+                                  ),
+                                  onPressed: () {
+                                    setState(
+                                      () =>
+                                          _obscurePassword = !_obscurePassword,
+                                    );
+                                  },
+                                ),
+                              ),
+                              validator: (val) {
+                                if (val == null || val.isEmpty) {
+                                  return "Please enter a password";
+                                }
+                                if (val.length < 6) {
+                                  return "Password must be at least 6 characters";
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 20),
+
+                            // Phone Number
+                            TextFormField(
+                              controller: _phoneController,
+                              style: const TextStyle(color: Color(0xFF1E293B)),
+                              keyboardType: TextInputType.phone,
+                              decoration: _lightInputDecoration(
+                                labelText: "Phone Number",
+                                prefixIcon: Icons.phone_outlined,
+                              ),
+                              validator: (val) {
+                                if (val == null || val.isEmpty) {
+                                  return "Please enter your phone number";
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 20),
+
+                            // Student ID (Only for Student Role)
+                            if (isStudent) ...[
+                              TextFormField(
+                                controller: _studentIdController,
+                                style: const TextStyle(
+                                  color: Color(0xFF1E293B),
+                                ),
+                                decoration: _lightInputDecoration(
+                                  labelText: "Student ID / Roll Number",
+                                  prefixIcon: Icons.badge_outlined,
+                                ),
+                                validator: (val) {
+                                  if (val == null || val.trim().isEmpty) {
+                                    return "Please enter your Student ID";
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 20),
+                            ],
+
+                            // College Name (Only if NOT Super Admin)
+                            if (!isSuperAdmin) ...[
+                              TextFormField(
+                                controller: _collegeNameController,
+                                style: const TextStyle(
+                                  color: Color(0xFF1E293B),
+                                ),
+                                decoration: _lightInputDecoration(
+                                  labelText: "College Name",
+                                  prefixIcon: Icons.apartment_outlined,
+                                ),
+                                validator: (val) {
+                                  if (val == null || val.isEmpty) {
+                                    return "Please enter your college name";
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 20),
+
+                              TextFormField(
+                                controller: _departmentController,
+                                style: const TextStyle(
+                                  color: Color(0xFF1E293B),
+                                ),
+                                decoration: _lightInputDecoration(
+                                  labelText: "Department / Major",
+                                  prefixIcon: Icons.badge_outlined,
+                                ),
+                                validator: (val) {
+                                  if (val == null || val.isEmpty) {
+                                    return "Please enter your department";
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 20),
+
+                              // ID Proof Link (Optional)
+                              TextFormField(
+                                controller: _idProofController,
+                                style: const TextStyle(
+                                  color: Color(0xFF1E293B),
+                                ),
+                                decoration: _lightInputDecoration(
+                                  labelText: _getIdProofLabel(),
+                                  prefixIcon: Icons.attachment_outlined,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                            ],
+
+                            // Optional Job/Startup Profile (Students Only)
+                            if (isStudent) ...[
+                              Padding(
+                                padding: const EdgeInsets.only(top: 10),
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: _brandColor.withValues(alpha: 0.3),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      Text(
+                                        "Job / Startup Profile (Optional)",
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: _brandColor,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      const Text(
+                                        "Note: Fill these details if you wish to share startup/job details.",
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF64748B),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      TextFormField(
+                                        controller: _businessNameController,
+                                        style: const TextStyle(
+                                          color: Color(0xFF1E293B),
+                                        ),
+                                        decoration: _lightInputDecoration(
+                                          labelText:
+                                              "Business/Startup Name (Optional)",
+                                          prefixIcon:
+                                              Icons.business_center_outlined,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      TextFormField(
+                                        controller: _descriptionController,
+                                        style: const TextStyle(
+                                          color: Color(0xFF1E293B),
+                                        ),
+                                        decoration: _lightInputDecoration(
+                                          labelText:
+                                              "Description of what company does (Optional)",
+                                          prefixIcon:
+                                              Icons.description_outlined,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      TextFormField(
+                                        controller: _contactPhoneController,
+                                        style: const TextStyle(
+                                          color: Color(0xFF1E293B),
+                                        ),
+                                        keyboardType: TextInputType.phone,
+                                        decoration: _lightInputDecoration(
+                                          labelText:
+                                              "Business Contact Phone Number (Optional)",
+                                          prefixIcon:
+                                              Icons.phone_android_outlined,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      TextFormField(
+                                        controller: _websiteUrlController,
+                                        style: const TextStyle(
+                                          color: Color(0xFF1E293B),
+                                        ),
+                                        decoration: _lightInputDecoration(
+                                          labelText: "Webpage Link (Optional)",
+                                          prefixIcon: Icons.web_outlined,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      TextFormField(
+                                        controller: _instagramUrlController,
+                                        style: const TextStyle(
+                                          color: Color(0xFF1E293B),
+                                        ),
+                                        decoration: _lightInputDecoration(
+                                          labelText:
+                                              "Instagram Link (Optional)",
+                                          prefixIcon: Icons.camera_alt_outlined,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      TextFormField(
+                                        controller: _linkedinUrlController,
+                                        style: const TextStyle(
+                                          color: Color(0xFF1E293B),
+                                        ),
+                                        decoration: _lightInputDecoration(
+                                          labelText: "LinkedIn Link (Optional)",
+                                          prefixIcon: Icons.link_outlined,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      TextFormField(
+                                        controller: _branchController,
+                                        style: const TextStyle(
+                                          color: Color(0xFF1E293B),
+                                        ),
+                                        decoration: _lightInputDecoration(
+                                          labelText: "Branch/Field (Optional)",
+                                          prefixIcon: Icons.school_outlined,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      TextFormField(
+                                        controller: _passingYearController,
+                                        style: const TextStyle(
+                                          color: Color(0xFF1E293B),
+                                        ),
+                                        keyboardType: TextInputType.number,
+                                        decoration: _lightInputDecoration(
+                                          labelText:
+                                              "Passing Out Year (Optional)",
+                                          prefixIcon:
+                                              Icons.calendar_today_outlined,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      // CV PDF Upload UI
+                                      _isUploadingResume
+                                          ? const Center(
+                                              child: Padding(
+                                                padding: EdgeInsets.symmetric(vertical: 8.0),
+                                                child: CircularProgressIndicator(),
+                                              ),
+                                            )
+                                          : Container(
+                                              decoration: BoxDecoration(
+                                                border: Border.all(
+                                                  color: const Color(0xFFCBD5E1),
+                                                  width: 1,
+                                                ),
+                                                borderRadius: BorderRadius.circular(16),
+                                                color: Colors.white,
+                                              ),
+                                              child: InkWell(
+                                                onTap: _pickAndUploadResume,
+                                                borderRadius: BorderRadius.circular(16),
+                                                child: Padding(
+                                                  padding: const EdgeInsets.symmetric(
+                                                    horizontal: 16,
+                                                    vertical: 16,
+                                                  ),
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(
+                                                        Icons.picture_as_pdf_outlined,
+                                                        color: _resumeController.text.isNotEmpty
+                                                            ? Colors.green
+                                                            : const Color(0xFF64748B),
+                                                      ),
+                                                      const SizedBox(width: 12),
+                                                      Expanded(
+                                                        child: Column(
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment.start,
+                                                          children: [
+                                                            Text(
+                                                              _uploadedResumeName != null
+                                                                  ? "Selected: $_uploadedResumeName"
+                                                                  : (_resumeController.text.isNotEmpty
+                                                                      ? "Resume Uploaded"
+                                                                      : "Upload CV PDF (Max 15MB, PDF Only)"),
+                                                              style: TextStyle(
+                                                                color: _resumeController.text.isNotEmpty
+                                                                    ? Colors.green
+                                                                    : const Color(0xFF1E293B),
+                                                                fontWeight: _resumeController.text.isNotEmpty
+                                                                    ? FontWeight.bold
+                                                                    : FontWeight.normal,
+                                                                fontSize: 14,
+                                                              ),
+                                                            ),
+                                                            if (_resumeController.text.isNotEmpty)
+                                                              const SizedBox(height: 2),
+                                                            if (_resumeController.text.isNotEmpty)
+                                                              const Text(
+                                                                "Tap to replace the file",
+                                                                style: TextStyle(
+                                                                  color: Color(0xFF64748B),
+                                                                  fontSize: 11,
+                                                                ),
+                                                              ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      if (_resumeController.text.isNotEmpty)
+                                                        const Icon(
+                                                          Icons.check_circle,
+                                                          color: Colors.green,
+                                                        )
+                                                      else
+                                                        const Icon(
+                                                          Icons.upload_file_outlined,
+                                                          color: Color(0xFF64748B),
+                                                        ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                            ],
+
+                            const SizedBox(height: 10),
+
+                            // Sign Up Submit Button
+                            _isLoading
+                                ? Center(
+                                    child: CircularProgressIndicator(
+                                      color: _brandColor,
+                                    ),
+                                  )
+                                : Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          _brandColor,
+                                          _brandColor.withValues(alpha: 0.85),
+                                        ],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: _brandColor.withValues(
+                                            alpha: 0.3,
+                                          ),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.transparent,
+                                        shadowColor: Colors.transparent,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                        ),
+                                      ),
+                                      onPressed: _register,
+                                      child: const Text(
+                                        "Create Account",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Back to Login
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            "Already have an account?",
+                            style: TextStyle(color: Color(0xFF64748B)),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            child: Text(
+                              "Sign In",
+                              style: TextStyle(
+                                color: _brandColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 40),
                     ],
                   ),
-                  const SizedBox(height: 40),
-                ],
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

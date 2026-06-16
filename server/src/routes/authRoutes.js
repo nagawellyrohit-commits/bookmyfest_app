@@ -8,7 +8,8 @@ import {
   getPendingFaculties,
   verifyFaculty,
   deleteCoordinator,
-  updateProfile
+  updateProfile,
+  uploadFile
 } from '../controllers/authController.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 
@@ -17,6 +18,7 @@ const router = express.Router();
 // Public registration and login routes
 router.post('/register', register);
 router.post('/login', login);
+router.post('/upload', uploadFile);
 
 // Protected user profile routes (require valid Bearer token)
 router.get('/me', authenticateToken, getMe);

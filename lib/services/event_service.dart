@@ -325,6 +325,82 @@ class EventService {
     }
   }
 
+  // Super Admin view ALL job profiles (regardless of passing/final year status)
+  Future<List<dynamic>> getAllJobProfiles(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse("$baseUrl/admin/all-job-profiles"),
+        headers: _headers(token),
+      );
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        return responseData['data'];
+      }
+      throw Exception(
+        responseData['message'] ?? 'Failed to load all job profiles',
+      );
+    } catch (e) {
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
+    }
+  }
+
+  // Super Admin view all student accounts
+  Future<List<dynamic>> getAllStudents(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse("$baseUrl/admin/students"),
+        headers: _headers(token),
+      );
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        return responseData['data'];
+      }
+      throw Exception(
+        responseData['message'] ?? 'Failed to load students',
+      );
+    } catch (e) {
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
+    }
+  }
+
+  // Super Admin view all faculty admin accounts
+  Future<List<dynamic>> getAllFaculties(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse("$baseUrl/admin/faculties"),
+        headers: _headers(token),
+      );
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        return responseData['data'];
+      }
+      throw Exception(
+        responseData['message'] ?? 'Failed to load faculties',
+      );
+    } catch (e) {
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
+    }
+  }
+
+  // Super Admin view all coordinator accounts
+  Future<List<dynamic>> getAllCoordinators(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse("$baseUrl/admin/coordinators"),
+        headers: _headers(token),
+      );
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        return responseData['data'];
+      }
+      throw Exception(
+        responseData['message'] ?? 'Failed to load coordinators',
+      );
+    } catch (e) {
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
+    }
+  }
+
   // Get pending event approvals (Faculty Admin)
   Future<List<dynamic>> getPendingEventApprovals(String token) async {
     try {

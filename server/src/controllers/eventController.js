@@ -1,4 +1,5 @@
 import prisma from '../config/db.js';
+import { Prisma } from '@prisma/client';
 import crypto from 'crypto';
 import { logAudit } from '../utils/dbHelper.js';
 
@@ -352,7 +353,7 @@ export const getPendingEventApprovals = async (req, res, next) => {
         collegeId: actor.role === 'super_admin' ? undefined : actor.collegeId,
         OR: [
           { isPendingDeletion: true },
-          { NOT: { pendingUpdates: null } }
+          { pendingUpdates: { not: Prisma.AnyNull } }
         ]
       },
       include: {
