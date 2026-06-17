@@ -223,270 +223,282 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       appBar: AppBar(
         title: const Text("Edit Profile"),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text(
-                      "Personal Details",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _fullNameController,
-                      style: const TextStyle(color: AppTheme.textPrimary),
-                      decoration: AppTheme.inputDecoration(
-                        labelText: "Full Name",
-                        prefixIcon: Icons.person_outline,
-                      ),
-                      validator: (val) {
-                        if (val == null || val.isEmpty) {
-                          return "Please enter your name";
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _phoneController,
-                      style: const TextStyle(color: AppTheme.textPrimary),
-                      decoration: AppTheme.inputDecoration(
-                        labelText: "Phone Number",
-                        prefixIcon: Icons.phone_outlined,
-                      ),
-                      validator: (val) {
-                        if (val == null || val.isEmpty) {
-                          return "Please enter your phone number";
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _departmentController,
-                      style: const TextStyle(color: AppTheme.textPrimary),
-                      decoration: AppTheme.inputDecoration(
-                        labelText: "Department / Major",
-                        prefixIcon: Icons.badge_outlined,
-                      ),
-                      validator: (val) {
-                        if (val == null || val.isEmpty) {
-                          return "Please enter your department";
-                        }
-                        return null;
-                      },
-                    ),
-                    if (isStudent) ...[
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _studentIdController,
-                        style: const TextStyle(color: AppTheme.textPrimary),
-                        decoration: AppTheme.inputDecoration(
-                          labelText: "Student ID / Roll Number",
-                          prefixIcon: Icons.card_membership_outlined,
-                        ),
-                        validator: (val) {
-                          if (val == null || val.trim().isEmpty) {
-                            return "Please enter your Student ID";
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 32),
-                      const Text(
-                        "Job / Startup Profile (Optional)",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: AppTheme.cardDecoration(),
-                        child: Column(
-                          children: [
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/backgorund.png',
+              fit: BoxFit.cover,
+            ),
+          ),
+          Positioned.fill(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Text(
+                            "Personal Details",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _fullNameController,
+                            style: const TextStyle(color: AppTheme.textPrimary),
+                            decoration: AppTheme.inputDecoration(
+                              labelText: "Full Name",
+                              prefixIcon: Icons.person_outline,
+                            ),
+                            validator: (val) {
+                              if (val == null || val.isEmpty) {
+                                return "Please enter your name";
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _phoneController,
+                            style: const TextStyle(color: AppTheme.textPrimary),
+                            decoration: AppTheme.inputDecoration(
+                              labelText: "Phone Number",
+                              prefixIcon: Icons.phone_outlined,
+                            ),
+                            validator: (val) {
+                              if (val == null || val.isEmpty) {
+                                return "Please enter your phone number";
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _departmentController,
+                            style: const TextStyle(color: AppTheme.textPrimary),
+                            decoration: AppTheme.inputDecoration(
+                              labelText: "Department / Major",
+                              prefixIcon: Icons.badge_outlined,
+                            ),
+                            validator: (val) {
+                              if (val == null || val.isEmpty) {
+                                return "Please enter your department";
+                              }
+                              return null;
+                            },
+                          ),
+                          if (isStudent) ...[
+                            const SizedBox(height: 16),
                             TextFormField(
-                              controller: _businessNameController,
+                              controller: _studentIdController,
                               style: const TextStyle(color: AppTheme.textPrimary),
                               decoration: AppTheme.inputDecoration(
-                                labelText: "Business/Startup Name",
-                                prefixIcon: Icons.business_center_outlined,
+                                labelText: "Student ID / Roll Number",
+                                prefixIcon: Icons.card_membership_outlined,
+                              ),
+                              validator: (val) {
+                                if (val == null || val.trim().isEmpty) {
+                                  return "Please enter your Student ID";
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 32),
+                            const Text(
+                              "Job / Startup Profile (Optional)",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primary,
                               ),
                             ),
                             const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _descriptionController,
-                              style: const TextStyle(color: AppTheme.textPrimary),
-                              decoration: AppTheme.inputDecoration(
-                                labelText: "Description of what company does",
-                                prefixIcon: Icons.description_outlined,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _contactPhoneController,
-                              style: const TextStyle(color: AppTheme.textPrimary),
-                              decoration: AppTheme.inputDecoration(
-                                labelText: "Business Contact Phone",
-                                prefixIcon: Icons.phone_android_outlined,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _websiteUrlController,
-                              style: const TextStyle(color: AppTheme.textPrimary),
-                              decoration: AppTheme.inputDecoration(
-                                labelText: "Webpage Link",
-                                prefixIcon: Icons.web_outlined,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _instagramUrlController,
-                              style: const TextStyle(color: AppTheme.textPrimary),
-                              decoration: AppTheme.inputDecoration(
-                                labelText: "Instagram Link",
-                                prefixIcon: Icons.camera_alt_outlined,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _linkedinUrlController,
-                              style: const TextStyle(color: AppTheme.textPrimary),
-                              decoration: AppTheme.inputDecoration(
-                                labelText: "LinkedIn Link",
-                                prefixIcon: Icons.link_outlined,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _branchController,
-                              style: const TextStyle(color: AppTheme.textPrimary),
-                              decoration: AppTheme.inputDecoration(
-                                labelText: "Branch/Field",
-                                prefixIcon: Icons.school_outlined,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _passingYearController,
-                              style: const TextStyle(color: AppTheme.textPrimary),
-                              decoration: AppTheme.inputDecoration(
-                                labelText: "Passing Out Year",
-                                prefixIcon: Icons.calendar_today_outlined,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            // CV PDF Upload UI
-                            _isUploadingResume
-                                ? const Center(
-                                    child: Padding(
-                                      padding: EdgeInsets.symmetric(vertical: 8.0),
-                                      child: CircularProgressIndicator(color: AppTheme.primary),
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: AppTheme.cardDecoration(),
+                              child: Column(
+                                children: [
+                                  TextFormField(
+                                    controller: _businessNameController,
+                                    style: const TextStyle(color: AppTheme.textPrimary),
+                                    decoration: AppTheme.inputDecoration(
+                                      labelText: "Business/Startup Name",
+                                      prefixIcon: Icons.business_center_outlined,
                                     ),
-                                  )
-                                : Container(
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.surface,
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(color: const Color(0xFF334155), width: 1),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextFormField(
+                                    controller: _descriptionController,
+                                    style: const TextStyle(color: AppTheme.textPrimary),
+                                    decoration: AppTheme.inputDecoration(
+                                      labelText: "Description of what company does",
+                                      prefixIcon: Icons.description_outlined,
                                     ),
-                                    child: InkWell(
-                                      onTap: _pickAndUploadResume,
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 20,
-                                          vertical: 16,
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              Icons.picture_as_pdf_outlined,
-                                              color: _resumeController.text.isNotEmpty
-                                                  ? Colors.green
-                                                  : AppTheme.primary,
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextFormField(
+                                    controller: _contactPhoneController,
+                                    style: const TextStyle(color: AppTheme.textPrimary),
+                                    decoration: AppTheme.inputDecoration(
+                                      labelText: "Business Contact Phone",
+                                      prefixIcon: Icons.phone_android_outlined,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextFormField(
+                                    controller: _websiteUrlController,
+                                    style: const TextStyle(color: AppTheme.textPrimary),
+                                    decoration: AppTheme.inputDecoration(
+                                      labelText: "Webpage Link",
+                                      prefixIcon: Icons.web_outlined,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextFormField(
+                                    controller: _instagramUrlController,
+                                    style: const TextStyle(color: AppTheme.textPrimary),
+                                    decoration: AppTheme.inputDecoration(
+                                      labelText: "Instagram Link",
+                                      prefixIcon: Icons.camera_alt_outlined,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextFormField(
+                                    controller: _linkedinUrlController,
+                                    style: const TextStyle(color: AppTheme.textPrimary),
+                                    decoration: AppTheme.inputDecoration(
+                                      labelText: "LinkedIn Link",
+                                      prefixIcon: Icons.link_outlined,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextFormField(
+                                    controller: _branchController,
+                                    style: const TextStyle(color: AppTheme.textPrimary),
+                                    decoration: AppTheme.inputDecoration(
+                                      labelText: "Branch/Field",
+                                      prefixIcon: Icons.school_outlined,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextFormField(
+                                    controller: _passingYearController,
+                                    style: const TextStyle(color: AppTheme.textPrimary),
+                                    decoration: AppTheme.inputDecoration(
+                                      labelText: "Passing Out Year",
+                                      prefixIcon: Icons.calendar_today_outlined,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  // CV PDF Upload UI
+                                  _isUploadingResume
+                                      ? const Center(
+                                          child: Padding(
+                                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                                            child: CircularProgressIndicator(color: AppTheme.primary),
+                                          ),
+                                        )
+                                      : Container(
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.surface,
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(color: const Color(0xFF334155), width: 1),
+                                          ),
+                                          child: InkWell(
+                                            onTap: _pickAndUploadResume,
+                                            borderRadius: BorderRadius.circular(16),
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 20,
+                                                vertical: 16,
+                                              ),
+                                              child: Row(
                                                 children: [
-                                                  Text(
-                                                    _uploadedResumeName != null
-                                                        ? "Selected: $_uploadedResumeName"
-                                                        : (_resumeController.text.isNotEmpty
-                                                            ? "Resume Uploaded"
-                                                            : "Upload CV PDF (Max 15MB, PDF Only)"),
-                                                    style: TextStyle(
-                                                      color: _resumeController.text.isNotEmpty
-                                                          ? Colors.green
-                                                          : AppTheme.textPrimary,
-                                                      fontWeight: _resumeController.text.isNotEmpty
-                                                          ? FontWeight.bold
-                                                          : FontWeight.normal,
-                                                      fontSize: 14,
+                                                  Icon(
+                                                    Icons.picture_as_pdf_outlined,
+                                                    color: _resumeController.text.isNotEmpty
+                                                        ? Colors.green
+                                                        : AppTheme.primary,
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment.start,
+                                                      children: [
+                                                        Text(
+                                                          _uploadedResumeName != null
+                                                              ? "Selected: $_uploadedResumeName"
+                                                              : (_resumeController.text.isNotEmpty
+                                                                  ? "Resume Uploaded"
+                                                                  : "Upload CV PDF (Max 15MB, PDF Only)"),
+                                                          style: TextStyle(
+                                                            color: _resumeController.text.isNotEmpty
+                                                                ? Colors.green
+                                                                : AppTheme.textPrimary,
+                                                            fontWeight: _resumeController.text.isNotEmpty
+                                                                ? FontWeight.bold
+                                                                : FontWeight.normal,
+                                                            fontSize: 14,
+                                                          ),
+                                                        ),
+                                                        if (_resumeController.text.isNotEmpty)
+                                                          const SizedBox(height: 2),
+                                                        if (_resumeController.text.isNotEmpty)
+                                                          const Text(
+                                                            "Tap to replace the file",
+                                                            style: TextStyle(
+                                                              color: AppTheme.textSecondary,
+                                                              fontSize: 11,
+                                                              ),
+                                                            ),
+                                                      ],
                                                     ),
                                                   ),
                                                   if (_resumeController.text.isNotEmpty)
-                                                    const SizedBox(height: 2),
-                                                  if (_resumeController.text.isNotEmpty)
-                                                    const Text(
-                                                      "Tap to replace the file",
-                                                      style: TextStyle(
-                                                        color: AppTheme.textSecondary,
-                                                        fontSize: 11,
-                                                      ),
+                                                    const Icon(
+                                                      Icons.check_circle,
+                                                      color: Colors.green,
+                                                    )
+                                                  else
+                                                    const Icon(
+                                                      Icons.upload_file_outlined,
+                                                      color: AppTheme.textSecondary,
                                                     ),
                                                 ],
                                               ),
                                             ),
-                                            if (_resumeController.text.isNotEmpty)
-                                              const Icon(
-                                                Icons.check_circle,
-                                                color: Colors.green,
-                                              )
-                                            else
-                                              const Icon(
-                                                Icons.upload_file_outlined,
-                                                color: AppTheme.textSecondary,
-                                              ),
-                                          ],
+                                          ),
                                         ),
-                                      ),
-                                    ),
-                                  ),
-                          ],
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 32),
-                    _isSaving
-                        ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
-                        : ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: const Size.fromHeight(50),
+                                ],
+                              ),
                             ),
-                            onPressed: _saveProfile,
-                            child: const Text("Save Changes"),
-                          ),
-                    const SizedBox(height: 40),
-                  ],
-                ),
-              ),
-            ),
+                          ],
+                          const SizedBox(height: 32),
+                          _isSaving
+                              ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                              : ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    minimumSize: const Size.fromHeight(50),
+                                  ),
+                                  onPressed: _saveProfile,
+                                  child: const Text("Save Changes"),
+                                ),
+                          const SizedBox(height: 40),
+                        ],
+                      ),
+                    ),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }

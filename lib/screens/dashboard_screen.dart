@@ -293,108 +293,130 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("CollegeConnect"),
+        title: const Text(
+          "bookmyfest",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         actions: [
           if (role == 'coordinator')
             IconButton(
               icon: const Icon(
                 Icons.manage_accounts_rounded,
-                color: AppTheme.accent,
+                color: Colors.white,
               ),
               tooltip: "Account Settings",
               onPressed: () => _showCoordinatorSettings(context, user),
             ),
           IconButton(
-            icon: const Icon(Icons.logout_rounded, color: AppTheme.accent),
+            icon: const Icon(Icons.logout_rounded, color: Colors.white),
             tooltip: "Logout",
             onPressed: _logout,
           ),
         ],
       ),
-      body: isUnverified
-          ? Padding(
-              padding: const EdgeInsets.all(32.0),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.pending_actions_rounded,
-                      size: 80,
-                      color: AppTheme.accent,
-                    ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      "Verification Pending",
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      role == 'faculty_admin'
-                          ? "Your Faculty Admin account is pending approval from the Super Admin. You will gain access to verify coordinators and manage events once approved."
-                          : "Your Coordinator account is pending approval from the Faculty Admin. You will gain access once approved.",
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    ElevatedButton(
-                      onPressed: _fetchDashboardData,
-                      child: const Text("Check Verification Status"),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          : (_isLoadingData
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppTheme.primary),
-                  )
-                : Column(
-                    children: [
-                      if (role == 'coordinator' && user.isPendingDeletion)
-                        Container(
-                          color: AppTheme.accent.withValues(alpha: 0.9),
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
+      body: Stack(
+        children: [
+          // Background Image
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/backgorund.png',
+              fit: BoxFit.cover,
+            ),
+          ),
+          // Content layer
+          Positioned.fill(
+            child: isUnverified
+                ? Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.pending_actions_rounded,
+                            size: 80,
+                            color: AppTheme.accent,
                           ),
-                          child: const Row(
-                            children: [
-                              Icon(
-                                Icons.warning_amber_rounded,
-                                color: Colors.white,
-                              ),
-                              SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  "Your request to delete this account is pending Faculty Coordinator approval. You will remain active until approved.",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
+                          const SizedBox(height: 24),
+                          const Text(
+                            "Verification Pending",
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            role == 'faculty_admin'
+                                ? "Your Faculty Admin account is pending approval from the Super Admin. You will gain access to verify coordinators and manage events once approved."
+                                : "Your Coordinator account is pending approval from the Faculty Admin. You will gain access once approved.",
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                          ElevatedButton(
+                            onPressed: _fetchDashboardData,
+                            child: const Text("Check Verification Status"),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : (_isLoadingData
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                            color: AppTheme.primary,
+                          ),
+                        )
+                      : Column(
+                          children: [
+                            if (role == 'coordinator' && user.isPendingDeletion)
+                              Container(
+                                color: AppTheme.accent.withValues(alpha: 0.9),
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.warning_amber_rounded,
+                                      color: Colors.white,
+                                    ),
+                                    SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        "Your request to delete this account is pending Faculty Coordinator approval. You will remain active until approved.",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                      Expanded(
-                        child: RefreshIndicator(
-                          onRefresh: _fetchDashboardData,
-                          color: AppTheme.primary,
-                          child: _buildBodyByRole(role, user),
-                        ),
-                      ),
-                    ],
-                  )),
+                            Expanded(
+                              child: RefreshIndicator(
+                                onRefresh: _fetchDashboardData,
+                                color: AppTheme.primary,
+                                child: _buildBodyByRole(role, user),
+                              ),
+                            ),
+                          ],
+                        )),
+          ),
+        ],
+      ),
       bottomNavigationBar: isUnverified ? null : _buildBottomNavByRole(role),
       floatingActionButton: (role == 'coordinator' && _currentIndex == 0)
           ? FloatingActionButton.extended(
@@ -816,7 +838,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     const SizedBox(width: 8),
                                   ],
                                   Text(
-                                    ev['college']?['name'] ?? 'CollegeConnect',
+                                    ev['college']?['name'] ?? 'bookmyfest',
                                     style: const TextStyle(
                                       color: AppTheme.textSecondary,
                                       fontSize: 12,
@@ -1190,8 +1212,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Icon(icon, size: 20, color: AppTheme.textSecondary),
           const SizedBox(width: 12),
           Text(
-             "$label: ",
-             style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+            "$label: ",
+            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
           ),
           Expanded(
             child: GestureDetector(
@@ -1709,7 +1731,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onTap: () async {
                       final url = Uri.parse(websiteUrl);
                       if (await canLaunchUrl(url)) {
-                        await launchUrl(url, mode: LaunchMode.externalApplication);
+                        await launchUrl(
+                          url,
+                          mode: LaunchMode.externalApplication,
+                        );
                       }
                     },
                   ),
@@ -1722,7 +1747,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onTap: () async {
                       final url = Uri.parse(instagramUrl);
                       if (await canLaunchUrl(url)) {
-                        await launchUrl(url, mode: LaunchMode.externalApplication);
+                        await launchUrl(
+                          url,
+                          mode: LaunchMode.externalApplication,
+                        );
                       }
                     },
                   ),
@@ -1735,7 +1763,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onTap: () async {
                       final url = Uri.parse(linkedinUrl);
                       if (await canLaunchUrl(url)) {
-                        await launchUrl(url, mode: LaunchMode.externalApplication);
+                        await launchUrl(
+                          url,
+                          mode: LaunchMode.externalApplication,
+                        );
                       }
                     },
                   ),
@@ -1745,13 +1776,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
               _profileDetailItem(
                 Icons.picture_as_pdf_outlined,
                 "Resume CV PDF",
-                resume != 'No link' && resume != 'No resume link provided' ? "Click to view PDF CV" : "No resume uploaded",
-                color: resume != 'No link' && resume != 'No resume link provided' ? Colors.blue : AppTheme.textSecondary,
-                onTap: resume != 'No link' && resume != 'No resume link provided'
+                resume != 'No link' && resume != 'No resume link provided'
+                    ? "Click to view PDF CV"
+                    : "No resume uploaded",
+                color:
+                    resume != 'No link' && resume != 'No resume link provided'
+                    ? Colors.blue
+                    : AppTheme.textSecondary,
+                onTap:
+                    resume != 'No link' && resume != 'No resume link provided'
                     ? () async {
                         final url = Uri.parse(resume);
                         if (await canLaunchUrl(url)) {
-                          await launchUrl(url, mode: LaunchMode.externalApplication);
+                          await launchUrl(
+                            url,
+                            mode: LaunchMode.externalApplication,
+                          );
                         }
                       }
                     : null,
@@ -2012,7 +2052,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       itemCount: _allStudents.length,
       itemBuilder: (context, index) {
         final student = _allStudents[index];
-        final isVerified = student['isVerified'] ?? student['is_verified'] ?? false;
+        final isVerified =
+            student['isVerified'] ?? student['is_verified'] ?? false;
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
           padding: const EdgeInsets.all(20),
@@ -2034,9 +2075,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
-                      color: isVerified ? Colors.green.withValues(alpha: 0.15) : Colors.amber.withValues(alpha: 0.15),
+                      color: isVerified
+                          ? Colors.green.withValues(alpha: 0.15)
+                          : Colors.amber.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -2053,17 +2099,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 4),
               Text(
                 "College: ${student['college']?['name'] ?? 'N/A'}",
-                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                style: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 13,
+                ),
               ),
               Text(
                 "Dept: ${student['department'] ?? 'N/A'}",
-                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                style: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 13,
+                ),
               ),
               const SizedBox(height: 12),
-              _profileDetailItem(Icons.email_outlined, "Email", student['email']),
-              _profileDetailItem(Icons.phone_outlined, "Phone", student['phone'] ?? 'N/A'),
+              _profileDetailItem(
+                Icons.email_outlined,
+                "Email",
+                student['email'],
+              ),
+              _profileDetailItem(
+                Icons.phone_outlined,
+                "Phone",
+                student['phone'] ?? 'N/A',
+              ),
               if (student['studentId'] != null)
-                _profileDetailItem(Icons.card_membership, "Student ID", student['studentId']),
+                _profileDetailItem(
+                  Icons.card_membership,
+                  "Student ID",
+                  student['studentId'],
+                ),
             ],
           ),
         );
@@ -2101,7 +2165,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       itemCount: _allCoordinators.length,
       itemBuilder: (context, index) {
         final coordinator = _allCoordinators[index];
-        final isVerified = coordinator['isVerified'] ?? coordinator['is_verified'] ?? false;
+        final isVerified =
+            coordinator['isVerified'] ?? coordinator['is_verified'] ?? false;
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
           padding: const EdgeInsets.all(20),
@@ -2123,9 +2188,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
-                      color: isVerified ? Colors.green.withValues(alpha: 0.15) : Colors.amber.withValues(alpha: 0.15),
+                      color: isVerified
+                          ? Colors.green.withValues(alpha: 0.15)
+                          : Colors.amber.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -2142,15 +2212,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 4),
               Text(
                 "College: ${coordinator['college']?['name'] ?? 'N/A'}",
-                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                style: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 13,
+                ),
               ),
               Text(
                 "Dept: ${coordinator['department'] ?? 'N/A'}",
-                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                style: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 13,
+                ),
               ),
               const SizedBox(height: 12),
-              _profileDetailItem(Icons.email_outlined, "Email", coordinator['email']),
-              _profileDetailItem(Icons.phone_outlined, "Phone", coordinator['phone'] ?? 'N/A'),
+              _profileDetailItem(
+                Icons.email_outlined,
+                "Email",
+                coordinator['email'],
+              ),
+              _profileDetailItem(
+                Icons.phone_outlined,
+                "Phone",
+                coordinator['phone'] ?? 'N/A',
+              ),
             ],
           ),
         );
@@ -2188,7 +2272,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       itemCount: _allFaculties.length,
       itemBuilder: (context, index) {
         final faculty = _allFaculties[index];
-        final isVerified = faculty['isVerified'] ?? faculty['is_verified'] ?? false;
+        final isVerified =
+            faculty['isVerified'] ?? faculty['is_verified'] ?? false;
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
           padding: const EdgeInsets.all(20),
@@ -2210,9 +2295,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
-                      color: isVerified ? Colors.green.withValues(alpha: 0.15) : Colors.amber.withValues(alpha: 0.15),
+                      color: isVerified
+                          ? Colors.green.withValues(alpha: 0.15)
+                          : Colors.amber.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -2229,15 +2319,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 4),
               Text(
                 "College: ${faculty['college']?['name'] ?? 'N/A'}",
-                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                style: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 13,
+                ),
               ),
               Text(
                 "Dept: ${faculty['department'] ?? 'N/A'}",
-                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                style: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 13,
+                ),
               ),
               const SizedBox(height: 12),
-              _profileDetailItem(Icons.email_outlined, "Email", faculty['email']),
-              _profileDetailItem(Icons.phone_outlined, "Phone", faculty['phone'] ?? 'N/A'),
+              _profileDetailItem(
+                Icons.email_outlined,
+                "Email",
+                faculty['email'],
+              ),
+              _profileDetailItem(
+                Icons.phone_outlined,
+                "Phone",
+                faculty['phone'] ?? 'N/A',
+              ),
               if (!isVerified) ...[
                 const SizedBox(height: 12),
                 ElevatedButton(
@@ -2248,7 +2352,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   onPressed: () async {
                     final messenger = ScaffoldMessenger.of(context);
                     try {
-                      await _authService.verifyFaculty(user.token!, faculty['id']);
+                      await _authService.verifyFaculty(
+                        user.token!,
+                        faculty['id'],
+                      );
                       if (!mounted) return;
                       messenger.showSnackBar(
                         const SnackBar(
@@ -2260,7 +2367,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     } catch (e) {
                       if (!mounted) return;
                       messenger.showSnackBar(
-                        SnackBar(content: Text("Error: $e"), backgroundColor: AppTheme.accent),
+                        SnackBar(
+                          content: Text("Error: $e"),
+                          backgroundColor: AppTheme.accent,
+                        ),
                       );
                     }
                   },

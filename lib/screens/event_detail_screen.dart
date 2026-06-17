@@ -525,22 +525,34 @@ class _EventDetailScreenState extends State<EventDetailScreen>
               },
             ),
             IconButton(
-              icon: const Icon(Icons.delete_rounded, color: AppTheme.accent),
+              icon: const Icon(Icons.delete_rounded, color: Colors.white),
               tooltip: "Delete Event",
               onPressed: _deleteEvent,
             ),
           ],
         ],
       ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppTheme.primary),
-            )
-          : widget.isCreateMode
-          ? _buildEventForm(isEditMode: false)
-          : _isEditing
-          ? _buildEventForm(isEditMode: true)
-          : _buildEventDetails(user),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/backgorund.png',
+              fit: BoxFit.cover,
+            ),
+          ),
+          Positioned.fill(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppTheme.primary),
+                  )
+                : widget.isCreateMode
+                    ? _buildEventForm(isEditMode: false)
+                    : _isEditing
+                        ? _buildEventForm(isEditMode: true)
+                        : _buildEventDetails(user),
+          ),
+        ],
+      ),
     );
   }
 
