@@ -9,7 +9,8 @@ import {
   verifyFaculty,
   deleteCoordinator,
   updateProfile,
-  uploadFile
+  uploadFile,
+  uploadImage
 } from '../controllers/authController.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 
@@ -19,6 +20,7 @@ const router = express.Router();
 router.post('/register', register);
 router.post('/login', login);
 router.post('/upload', uploadFile);
+router.post('/upload-image', uploadImage);
 
 // Protected user profile routes (require valid Bearer token)
 router.get('/me', authenticateToken, getMe);

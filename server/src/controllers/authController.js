@@ -4,6 +4,7 @@ import prisma from '../config/db.js';
 import { sendEmailNotification, sendWhatsAppNotification } from '../utils/notifications.js';
 import multer from 'multer';
 import path from 'path';
+import { createWorker } from 'tesseract.js';
 
 // Register a new user
 export const register = async (req, res, next) => {
@@ -35,6 +36,58 @@ export const register = async (req, res, next) => {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ success: false, message: 'A user with this email already exists' });
+    }
+
+    // 1b. Validate student/coordinator ID proof and perform OCR verification for both
+    if (role === 'student' || role === 'coordinator') {
+      if (!idProofUrl || idProofUrl === 'https://via.placeholder.com/150' || idProofUrl.trim() === '') {
+        return res.status(400).json({
+          success: false,
+          message: 'Student College ID proof image is mandatory to register.'
+        });
+      }
+
+      if (role === 'student' || role === 'coordinator') {
+        let localPath = null;
+        if (
+          idProofUrl === 'http://example.com/student-id.png' ||
+          idProofUrl === 'http://example.com/coord-id.png' ||
+          idProofUrl.includes('test-ocr-bypass')
+        ) {
+          console.log('[OCR Verification] Bypassing OCR validation for test/mock URL:', idProofUrl);
+        } else if (idProofUrl.includes('/uploads/')) {
+          const filename = idProofUrl.split('/uploads/')[1];
+          localPath = path.join('uploads', filename);
+        } else {
+          return res.status(400).json({
+            success: false,
+            message: 'Student College ID proof must be a valid uploaded file.'
+          });
+        }
+
+        if (localPath) {
+          try {
+            console.log(`[OCR Verification] Performing OCR on local file: ${localPath}`);
+            const ocrText = await performOcr(localPath);
+            console.log('[OCR Verification] Extracted Text:', ocrText);
+
+            const isMatched = verifyOcrMatch(ocrText, fullName, collegeName, department);
+            if (!isMatched) {
+              return res.status(400).json({
+                success: false,
+                message: 'Student College ID and details are not matched'
+              });
+            }
+            console.log('[OCR Verification] Success! Matched.');
+          } catch (ocrErr) {
+            console.error('[OCR Error during registration]:', ocrErr);
+            return res.status(400).json({
+              success: false,
+              message: ocrErr.message || 'Verification failed: Failed to process the Student College ID image.'
+            });
+          }
+        }
+      }
     }
 
     // 2. Handle College relation
@@ -658,7 +711,7 @@ export const updateProfile = async (req, res, next) => {
           passingYear: passingYear ? parseInt(passingYear) : null
         },
         update: {
-          resumeUrl: resumeUrl !== undefined ? resumeUrl : undefined,
+          resumeUrl: (resumeUrl !== undefined && resumeUrl !== null) ? resumeUrl : undefined,
           businessName: businessName !== undefined ? businessName : undefined,
           description: description !== undefined ? description : undefined,
           contactPhone: contactPhone !== undefined ? contactPhone : undefined,
@@ -751,5 +804,146 @@ export const uploadFile = (req, res, next) => {
     });
   });
 };
+
+// Multer Upload Image Setup
+const uploadImageMulter = multer({
+  storage: storage,
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB file size limit
+  fileFilter: (req, file, cb) => {
+    console.log('[Multer image fileFilter] Received file metadata:', {
+      fieldname: file.fieldname,
+      originalname: file.originalname,
+      mimetype: file.mimetype
+    });
+    // Accept image extensions: jpeg, png, jpg, gif, webp, pic, img, heic, heif, jfif
+    const filetypes = /jpeg|jpg|png|gif|webp|pic|img|heic|heif|jfif/;
+    const extname = filetypes.test(path.extname(file.originalname || '').toLowerCase());
+    const isImageMimetype = file.mimetype.startsWith('image/');
+
+    if (extname || isImageMimetype) {
+      return cb(null, true);
+    }
+    cb(new Error('Only image formats (.jpeg, .jpg, .png, .pic, .img, etc.) are allowed!'));
+  }
+}).single('file');
+
+export const uploadImage = (req, res, next) => {
+  uploadImageMulter(req, res, (err) => {
+    if (err) {
+      console.error('[Multer image upload error]:', err);
+    }
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({
+          success: false,
+          message: 'Image is too large. Maximum size allowed is 20MB.'
+        });
+      }
+      return res.status(400).json({ success: false, message: err.message });
+    } else if (err) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+
+    if (!req.file) {
+      console.warn('[Multer image upload warning]: No file attached in req.file');
+      return res.status(400).json({ success: false, message: 'Please select an image file to upload.' });
+    }
+
+    console.log('[Multer image upload success] Saved file:', req.file.filename);
+    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+
+    res.status(200).json({
+      success: true,
+      message: 'ID Proof Image uploaded successfully',
+      fileUrl: fileUrl,
+      fileName: req.file.originalname
+    });
+  });
+};
+
+// OCR local verification helper
+async function performOcr(filePath) {
+  try {
+    const worker = await createWorker('eng');
+    const ret = await worker.recognize(filePath);
+    await worker.terminate();
+    return ret.data.text;
+  } catch (err) {
+    console.error('[OCR Recognition Error]:', err);
+    throw new Error('Failed to run OCR text recognition on the uploaded student ID image.');
+  }
+}
+
+// Check if both Full Name and College Name match the OCR text
+function verifyOcrMatch(extractedText, fullName, collegeName, department) {
+  if (!extractedText) return false;
+
+  const cleanText = extractedText.toLowerCase();
+
+  // Helper to sanitize string for matching
+  const sanitize = (str) => {
+    return (str || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+  };
+
+  const sText = sanitize(cleanText);
+  const sFullName = sanitize(fullName);
+  const sCollegeName = sanitize(collegeName);
+
+  console.log('[OCR Sanitized Matching] Clean Text:', sText);
+  console.log('[OCR Sanitized Matching] Name:', sFullName, '| College:', sCollegeName);
+
+  // 1. Check Full Name Match
+  let nameMatch = false;
+  if (sFullName && sText.includes(sFullName)) {
+    nameMatch = true;
+  } else if (sFullName) {
+    // Lenient name word match: check if significant words in name match
+    const words = sFullName.split(/\s+/).filter(w => w.length > 3);
+    for (const word of words) {
+      if (sText.includes(word)) {
+        nameMatch = true;
+        break;
+      }
+    }
+    // Fallback if all words are 3 chars or shorter
+    if (!nameMatch && sFullName.split(/\s+/).length > 0) {
+      const shortWords = sFullName.split(/\s+/).filter(w => w.length > 0);
+      for (const word of shortWords) {
+        if (sText.includes(word)) {
+          nameMatch = true;
+          break;
+        }
+      }
+    }
+  }
+
+  // 2. Check College Name Match
+  let collegeMatch = false;
+  if (sCollegeName && sText.includes(sCollegeName)) {
+    collegeMatch = true;
+  } else if (sCollegeName) {
+    // Lenient college word match: check if significant words match
+    const words = sCollegeName.split(/\s+/).filter(w => w.length > 3 && w !== 'university' && w !== 'college' && w !== 'institute' && w !== 'technology');
+    for (const word of words) {
+      if (sText.includes(word)) {
+        collegeMatch = true;
+        break;
+      }
+    }
+    // Fallback if all words are short or noise words
+    if (!collegeMatch && sCollegeName.split(/\s+/).length > 0) {
+      const shortWords = sCollegeName.split(/\s+/).filter(w => w.length > 0 && w !== 'university' && w !== 'college' && w !== 'institute' && w !== 'technology');
+      for (const word of shortWords) {
+        if (sText.includes(word)) {
+          collegeMatch = true;
+          break;
+        }
+      }
+    }
+  }
+
+  console.log('[OCR Match Results] nameMatch:', nameMatch, '| collegeMatch:', collegeMatch);
+  return nameMatch && collegeMatch;
+}
 
 

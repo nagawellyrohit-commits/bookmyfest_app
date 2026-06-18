@@ -74,7 +74,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       // Update job profile fields
       if (profile['jobProfile'] != null) {
         final jp = profile['jobProfile'];
-        _resumeController.text = jp['resumeUrl'] ?? '';
+        final resumeVal = jp['resumeUrl'];
+        _resumeController.text = (resumeVal != null && resumeVal != 'No resume link provided') ? resumeVal : '';
         _businessNameController.text = jp['businessName'] ?? '';
         _descriptionController.text = jp['description'] ?? '';
         _contactPhoneController.text = jp['contactPhone'] ?? '';

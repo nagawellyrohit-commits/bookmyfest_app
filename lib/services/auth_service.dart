@@ -301,4 +301,46 @@ class AuthService {
       throw Exception(e.toString().replaceAll("Exception: ", ""));
     }
   }
+
+  // Upload an image file to the backend
+  Future<String> uploadImage(List<int> fileBytes, String fileName) async {
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse("$baseUrl/auth/upload-image"),
+      );
+
+      // Determine content type based on extension
+      String mimeSub = 'jpeg';
+      final lowerName = fileName.toLowerCase();
+      if (lowerName.endsWith('.png')) {
+        mimeSub = 'png';
+      } else if (lowerName.endsWith('.webp')) {
+        mimeSub = 'webp';
+      } else if (lowerName.endsWith('.gif')) {
+        mimeSub = 'gif';
+      }
+
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          fileBytes,
+          filename: fileName,
+          contentType: MediaType('image', mimeSub),
+        ),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        return responseData['fileUrl'];
+      } else {
+        throw Exception(responseData['message'] ?? 'Failed to upload image');
+      }
+    } catch (e) {
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
+    }
+  }
 }

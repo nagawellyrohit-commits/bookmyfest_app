@@ -120,7 +120,7 @@ export const getAllJobProfiles = async (req, res, next) => {
           }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { updatedAt: 'desc' }
     });
     res.status(200).json({ success: true, data: profiles });
   } catch (error) {

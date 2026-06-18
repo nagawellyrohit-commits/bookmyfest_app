@@ -1,5 +1,7 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
 import 'welcome_screen.dart';
 
@@ -36,6 +38,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _isUploadingResume = false;
   String? _uploadedResumeName;
+  bool _isUploadingIdProof = false;
+  String? _uploadedIdProofName;
+  Uint8List? _idProofImageBytes;
 
   late String _selectedRole;
 
@@ -63,22 +68,153 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // ID Proof field label helper
   String _getIdProofLabel() {
-    switch (_selectedRole) {
-      case 'student':
-        return "Student ID Card Proof URL (Optional)";
-      case 'coordinator':
-        return "Coordinator ID Card Proof URL (Optional)";
-      case 'faculty_admin':
-        return "Faculty ID Card Proof URL (Optional)";
-      default:
-        return "ID Proof URL (Optional)";
+    if (_selectedRole == 'student' || _selectedRole == 'coordinator') {
+      return 'Student College ID';
+    }
+    return 'Faculty ID';
+  }
+
+
+
+  Future<void> _pickIdProofImage() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      
+      final String? source = await showModalBottomSheet<String>(
+        context: context,
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (context) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Text(
+                "Select ${_getIdProofLabel()} Proof",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: Icon(Icons.camera_alt_outlined, color: _brandColor),
+                title: const Text('Click Photo (Camera)'),
+                onTap: () => Navigator.pop(context, 'camera'),
+              ),
+              ListTile(
+                leading: Icon(Icons.photo_library_outlined, color: _brandColor),
+                title: const Text('Upload from Gallery / Files'),
+                onTap: () => Navigator.pop(context, 'gallery'),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        ),
+      );
+
+      if (source == null) return;
+
+      XFile? pickedFile;
+      if (source == 'camera') {
+        pickedFile = await picker.pickImage(
+          source: ImageSource.camera,
+          imageQuality: 85,
+        );
+      } else {
+        pickedFile = await picker.pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 85,
+        );
+      }
+
+      if (pickedFile == null) return;
+
+      final fileName = pickedFile.name;
+      final fileBytes = await pickedFile.readAsBytes();
+
+      // Check image type (jpeg, png, jpg, webp, pic, img, jfif, heic, heif)
+      final lowerName = fileName.toLowerCase();
+      final allowedExtensions = ['.jpeg', '.jpg', '.png', '.webp', '.pic', '.img', '.jfif', '.heic', '.heif'];
+      bool isValidExt = false;
+      for (var ext in allowedExtensions) {
+        if (lowerName.endsWith(ext)) {
+          isValidExt = true;
+          break;
+        }
+      }
+
+      if (!isValidExt) {
+        throw Exception("Only image formats (JPEG, JPG, PNG, WEBP, PIC, IMG, etc.) are allowed!");
+      }
+
+      const maxLimit = 20 * 1024 * 1024;
+      if (fileBytes.length > maxLimit) {
+        throw Exception("Image size exceeds 20MB limit. Please capture/choose a smaller image.");
+      }
+
+      setState(() {
+        _isUploadingIdProof = true;
+        _idProofImageBytes = fileBytes;
+        _uploadedIdProofName = fileName;
+      });
+
+      // Upload file to server
+      final fileUrl = await _authService.uploadImage(fileBytes, fileName);
+
+      setState(() {
+        _idProofController.text = fileUrl;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("${_getIdProofLabel()} Proof uploaded successfully!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _idProofImageBytes = null;
+        _uploadedIdProofName = null;
+        _idProofController.clear();
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll("Exception: ", "")),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingIdProof = false;
+        });
+      }
     }
   }
 
   void _register() async {
     if (!_formKey.currentState!.validate()) return;
+
+    final isStudent = _selectedRole == 'student';
+    final isCoordinator = _selectedRole == 'coordinator';
+    if ((isStudent || isCoordinator) && _idProofController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("${_getIdProofLabel()} Proof is mandatory to register!"),
+          backgroundColor: _brandColor,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -520,17 +656,129 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                               const SizedBox(height: 20),
 
-                              // ID Proof Link (Optional)
-                              TextFormField(
-                                controller: _idProofController,
-                                style: const TextStyle(
-                                  color: Color(0xFF1E293B),
-                                ),
-                                decoration: _lightInputDecoration(
-                                  labelText: _getIdProofLabel(),
-                                  prefixIcon: Icons.attachment_outlined,
+                              // ID Proof Upload UI (Mandatory for student)
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
+                                  child: Text(
+                                    "${_getIdProofLabel()} Proof${(_selectedRole == 'student' || _selectedRole == 'coordinator') ? ' (Required)' : ''}",
+                                    style: const TextStyle(
+                                      color: Color(0xFF0F172A),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
                                 ),
                               ),
+                              _isUploadingIdProof
+                                  ? const Center(
+                                      child: Padding(
+                                        padding: EdgeInsets.symmetric(vertical: 16.0),
+                                        child: CircularProgressIndicator(),
+                                      ),
+                                    )
+                                  : Container(
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: _idProofController.text.isNotEmpty
+                                              ? Colors.green
+                                              : const Color(0xFFCBD5E1),
+                                          width: _idProofController.text.isNotEmpty ? 1.5 : 1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(16),
+                                        color: Colors.white,
+                                      ),
+                                      child: InkWell(
+                                        onTap: _pickIdProofImage,
+                                        borderRadius: BorderRadius.circular(16),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 16,
+                                          ),
+                                          child: Column(
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.camera_alt_outlined,
+                                                    color: _idProofController.text.isNotEmpty
+                                                        ? Colors.green
+                                                        : const Color(0xFF64748B),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment.start,
+                                                      children: [
+                                                        Text(
+                                                          _uploadedIdProofName != null
+                                                              ? "Selected: $_uploadedIdProofName"
+                                                              : (_idProofController.text.isNotEmpty
+                                                                  ? "${_getIdProofLabel()} Uploaded"
+                                                                  : "Click Photo or Upload ${_getIdProofLabel()}"),
+                                                          style: TextStyle(
+                                                            color: _idProofController.text.isNotEmpty
+                                                                ? Colors.green
+                                                                : const Color(0xFF1E293B),
+                                                            fontWeight: _idProofController.text.isNotEmpty
+                                                                ? FontWeight.bold
+                                                                : FontWeight.normal,
+                                                            fontSize: 14,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(height: 2),
+                                                        Text(
+                                                          _idProofController.text.isNotEmpty
+                                                              ? "Tap to retake/re-upload"
+                                                              : "JPEG, JPG, PNG, PIC, IMG up to 20MB",
+                                                          style: const TextStyle(
+                                                            color: Color(0xFF64748B),
+                                                            fontSize: 11,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  if (_idProofController.text.isNotEmpty)
+                                                    const Icon(
+                                                      Icons.check_circle,
+                                                      color: Colors.green,
+                                                    )
+                                                  else
+                                                    const Icon(
+                                                      Icons.upload_file_outlined,
+                                                      color: Color(0xFF64748B),
+                                                    ),
+                                                ],
+                                              ),
+                                              if (_idProofImageBytes != null) ...[
+                                                const SizedBox(height: 12),
+                                                ClipRRect(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  child: Container(
+                                                    height: 120,
+                                                    width: double.infinity,
+                                                    decoration: BoxDecoration(
+                                                      border: Border.all(
+                                                        color: const Color(0xFFE2E8F0),
+                                                      ),
+                                                      color: const Color(0xFFF8FAFC),
+                                                    ),
+                                                    child: Image.memory(
+                                                      _idProofImageBytes!,
+                                                      fit: BoxFit.contain,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                               const SizedBox(height: 20),
                             ],
 
@@ -678,8 +926,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                           : Container(
                                               decoration: BoxDecoration(
                                                 border: Border.all(
-                                                  color: const Color(0xFFCBD5E1),
-                                                  width: 1,
+                                                  color: _resumeController.text.isNotEmpty
+                                                      ? Colors.green
+                                                      : const Color(0xFFCBD5E1),
+                                                  width: _resumeController.text.isNotEmpty ? 1.5 : 1,
                                                 ),
                                                 borderRadius: BorderRadius.circular(16),
                                                 color: Colors.white,

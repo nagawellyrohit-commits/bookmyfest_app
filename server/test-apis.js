@@ -10,6 +10,7 @@ async function runTests() {
   console.log('--- STARTING COLLEGE_CONNECT API SYSTEM TESTS ---');
   
   const timestamp = Date.now();
+  const collegeName = `Tech University ${timestamp}`;
   const studentEmail = `student_${timestamp}@test.com`;
   const coordEmail = `coordinator_${timestamp}@test.com`;
   const facultyEmail = `faculty_${timestamp}@test.com`;
@@ -28,7 +29,7 @@ async function runTests() {
       password: password,
       phone: '+919999999991',
       role: 'student',
-      collegeName: 'Tech University',
+      collegeName: collegeName,
       department: 'Computer Science',
       idProofUrl: 'http://example.com/student-id.png',
       isFinalYear: true,
@@ -48,7 +49,7 @@ async function runTests() {
       password: password,
       phone: '+919999999992',
       role: 'coordinator',
-      collegeName: 'Tech University',
+      collegeName: collegeName,
       department: 'Information Technology',
       idProofUrl: 'http://example.com/coord-id.png',
       isFinalYear: false
@@ -67,7 +68,7 @@ async function runTests() {
       password: password,
       phone: '+919999999993',
       role: 'faculty_admin',
-      collegeName: 'Tech University',
+      collegeName: collegeName,
       department: 'Computer Science',
       idProofUrl: 'http://example.com/faculty-id.png',
       isFinalYear: false

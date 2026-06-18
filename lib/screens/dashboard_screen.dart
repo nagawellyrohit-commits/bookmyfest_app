@@ -60,11 +60,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.dispose();
   }
 
-  Future<void> _fetchDashboardData() async {
+  Future<void> _fetchDashboardData({bool silent = false}) async {
     final user = Provider.of<UserProvider>(context, listen: false);
     if (!user.isLoggedIn) return;
 
-    setState(() => _isLoadingData = true);
+    if (!silent) {
+      setState(() => _isLoadingData = true);
+    }
 
     try {
       final token = user.token!;
@@ -146,7 +148,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _isLoadingData = false);
+      if (mounted && !silent) setState(() => _isLoadingData = false);
     }
   }
 
@@ -290,6 +292,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final role = user.role ?? 'student';
     final isUnverified =
         (role == 'faculty_admin' || role == 'coordinator') && !user.isVerified;
+
+    // Clamping index to prevent out-of-bounds errors on role transitions/hot-reload
+    final expectedLength = role == 'super_admin' ? 5 : 3;
+    if (_currentIndex >= expectedLength) {
+      _currentIndex = 0;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -446,12 +454,71 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  void _changeTab(int idx) {
+    setState(() {
+      _currentIndex = idx;
+    });
+    _fetchDashboardData(silent: true);
+  }
+
+  Widget _buildEmptyStatePlaceholder({
+    required IconData icon,
+    required String message,
+    String? description,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      icon,
+                      size: 60,
+                      color: AppTheme.textSecondary,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      message,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                    if (description != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        description,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   // Custom Navigation bar depending on user role
   Widget? _buildBottomNavByRole(String role) {
     if (role == 'student') {
       return NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
+        onDestinationSelected: _changeTab,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.event_note_rounded),
@@ -470,7 +537,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } else if (role == 'coordinator') {
       return NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
+        onDestinationSelected: _changeTab,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.dashboard_customize_rounded),
@@ -489,7 +556,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } else if (role == 'faculty_admin') {
       return NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
+        onDestinationSelected: _changeTab,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.apartment_rounded),
@@ -508,7 +575,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } else if (role == 'super_admin') {
       return NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
+        onDestinationSelected: _changeTab,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.people_outline),
@@ -624,26 +691,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }).toList();
 
     if (_events.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.calendar_today_rounded,
-              size: 60,
-              color: AppTheme.textSecondary,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              "No Active Events Found",
-              style: TextStyle(
-                color: AppTheme.textPrimary.withValues(alpha: 0.8),
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
+      return _buildEmptyStatePlaceholder(
+        icon: Icons.calendar_today_rounded,
+        message: "No Active Events Found",
       );
     }
 
@@ -960,35 +1010,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }).toList();
 
     if (registeredEvents.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.confirmation_num_rounded,
-              size: 60,
-              color: AppTheme.textSecondary,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              "My Event Passes",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 40),
-              child: Text(
-                "Select an event in the Browse tab to register and unlock your ticket and attendance tracking.",
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
-              ),
-            ),
-          ],
-        ),
+      return _buildEmptyStatePlaceholder(
+        icon: Icons.confirmation_num_rounded,
+        message: "My Event Passes",
+        description: "Select an event in the Browse tab to register and unlock your ticket and attendance tracking.",
       );
     }
 
@@ -1306,30 +1331,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Faculty specific verification list tab
   Widget _buildFacultyVerifyCoordinatorsTab(UserProvider user) {
     if (_pendingCoordinators.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.verified_user_outlined,
-              size: 60,
-              color: AppTheme.textSecondary,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              "No Pending Approvals",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-            const Text(
-              "All coordinators in your college are verified.",
-              style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-            ),
-          ],
-        ),
+      return _buildEmptyStatePlaceholder(
+        icon: Icons.verified_user_outlined,
+        message: "No Pending Approvals",
+        description: "All coordinators in your college are verified.",
       );
     }
 
@@ -1561,26 +1566,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Super Admin view ALL job profiles (regardless of passing/final year status)
   Widget _buildSuperAdminJobProfilesTab(UserProvider user) {
     if (_jobProfiles.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.work_off_rounded,
-              size: 60,
-              color: AppTheme.textSecondary,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              "No Job Profiles Registered",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-          ],
-        ),
+      return _buildEmptyStatePlaceholder(
+        icon: Icons.work_off_rounded,
+        message: "No Job Profiles Registered",
       );
     }
 
@@ -1806,26 +1794,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Faculty tab for approving coordinator event updates and deletions
   Widget _buildFacultyPendingEventApprovalsTab(UserProvider user) {
     if (_pendingEventApprovals.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.pending_actions_outlined,
-              size: 60,
-              color: AppTheme.textSecondary,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              "No Pending Event Approvals",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-          ],
-        ),
+      return _buildEmptyStatePlaceholder(
+        icon: Icons.pending_actions_outlined,
+        message: "No Pending Event Approvals",
       );
     }
 
@@ -2025,26 +1996,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Super Admin view all student accounts
   Widget _buildSuperAdminStudentsTab(UserProvider user) {
     if (_allStudents.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.people_outline,
-              size: 60,
-              color: AppTheme.textSecondary,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              "No Students Registered",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-          ],
-        ),
+      return _buildEmptyStatePlaceholder(
+        icon: Icons.people_outline,
+        message: "No Students Registered",
       );
     }
     return ListView.builder(
@@ -2138,26 +2092,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Super Admin view all coordinator accounts
   Widget _buildSuperAdminCoordinatorsTab(UserProvider user) {
     if (_allCoordinators.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.group_work_outlined,
-              size: 60,
-              color: AppTheme.textSecondary,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              "No Coordinators Registered",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-          ],
-        ),
+      return _buildEmptyStatePlaceholder(
+        icon: Icons.group_work_outlined,
+        message: "No Coordinators Registered",
       );
     }
     return ListView.builder(
@@ -2245,26 +2182,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Super Admin view all faculty accounts
   Widget _buildSuperAdminFacultiesTab(UserProvider user) {
     if (_allFaculties.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.person_pin_outlined,
-              size: 60,
-              color: AppTheme.textSecondary,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              "No Faculty Registered",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-          ],
-        ),
+      return _buildEmptyStatePlaceholder(
+        icon: Icons.person_pin_outlined,
+        message: "No Faculty Registered",
       );
     }
     return ListView.builder(

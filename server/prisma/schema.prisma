@@ -72,6 +72,7 @@ model JobProfile {
   branch       String?
   passingYear  Int?     @map("passing_year")
   createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@map("job_profiles")
 }
