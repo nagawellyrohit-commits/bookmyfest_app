@@ -1,8 +1,16 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class EventService {
-  static const String baseUrl = "http://localhost:5001/api";
+  static String get baseUrl {
+    if (kIsWeb) {
+      return "http://localhost:5001/api";
+    }
+    return defaultTargetPlatform == TargetPlatform.android
+        ? "http://10.0.2.2:5001/api"
+        : "http://localhost:5001/api";
+  }
 
   // Helpers to get request headers
   Map<String, String> _headers(String token) => {
@@ -122,8 +130,8 @@ class EventService {
         headers: _headers(token),
         body: jsonEncode({
           "registrationType": registrationType,
-          "paymentReference": ?paymentReference,
-          "groupSize": ?groupSize,
+          "paymentReference": paymentReference,
+          "groupSize": groupSize,
         }),
       );
       final responseData = jsonDecode(response.body);

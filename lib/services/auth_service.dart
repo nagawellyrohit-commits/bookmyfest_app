@@ -1,11 +1,18 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
 class AuthService {
-  // Use localhost:5001 for Web/iOS Simulator.
-  // For Android emulator, you can change this to http://10.0.2.2:5001/api
-  static const String baseUrl = "http://localhost:5001/api";
+  // Use 10.0.2.2 for Android Emulator, localhost for iOS/Web.
+  static String get baseUrl {
+    if (kIsWeb) {
+      return "http://localhost:5001/api";
+    }
+    return defaultTargetPlatform == TargetPlatform.android
+        ? "http://10.0.2.2:5001/api"
+        : "http://localhost:5001/api";
+  }
 
   // Login a user
   Future<Map<String, dynamic>> login(String email, String password) async {
@@ -60,17 +67,17 @@ class AuthService {
         "department": department.trim(),
         "idProofUrl": idProofUrl.trim(),
         "isFinalYear": isFinalYear,
-        "resumeUrl": ?resumeUrl?.trim(),
+        "resumeUrl": resumeUrl?.trim(),
         if (role == 'student' && studentId != null)
           "studentId": studentId.trim(),
-        "businessName": ?businessName?.trim(),
-        "description": ?description?.trim(),
-        "contactPhone": ?contactPhone?.trim(),
-        "websiteUrl": ?websiteUrl?.trim(),
-        "instagramUrl": ?instagramUrl?.trim(),
-        "linkedinUrl": ?linkedinUrl?.trim(),
-        "branch": ?branch?.trim(),
-        "passingYear": ?passingYear,
+        "businessName": businessName?.trim(),
+        "description": description?.trim(),
+        "contactPhone": contactPhone?.trim(),
+        "websiteUrl": websiteUrl?.trim(),
+        "instagramUrl": instagramUrl?.trim(),
+        "linkedinUrl": linkedinUrl?.trim(),
+        "branch": branch?.trim(),
+        "passingYear": passingYear,
       };
 
       final response = await http.post(
@@ -233,16 +240,16 @@ class AuthService {
         "fullName": fullName.trim(),
         "phone": phone.trim(),
         "department": department.trim(),
-        "studentId": ?studentId?.trim(),
-        "resumeUrl": ?resumeUrl?.trim(),
-        "businessName": ?businessName?.trim(),
-        "description": ?description?.trim(),
-        "contactPhone": ?contactPhone?.trim(),
-        "websiteUrl": ?websiteUrl?.trim(),
-        "instagramUrl": ?instagramUrl?.trim(),
-        "linkedinUrl": ?linkedinUrl?.trim(),
-        "branch": ?branch?.trim(),
-        "passingYear": ?passingYear,
+        "studentId": studentId?.trim(),
+        "resumeUrl": resumeUrl?.trim(),
+        "businessName": businessName?.trim(),
+        "description": description?.trim(),
+        "contactPhone": contactPhone?.trim(),
+        "websiteUrl": websiteUrl?.trim(),
+        "instagramUrl": instagramUrl?.trim(),
+        "linkedinUrl": linkedinUrl?.trim(),
+        "branch": branch?.trim(),
+        "passingYear": passingYear,
       };
 
       final response = await http.put(

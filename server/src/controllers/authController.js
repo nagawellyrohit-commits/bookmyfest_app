@@ -133,13 +133,113 @@ export const register = async (req, res, next) => {
     });
 
     // 5. Send registration notification alerts (Email & WhatsApp)
-    const welcomeSubject = 'Welcome to BookmyFest!';
-    const welcomeMsg = `Welcome to BookmyFest! Hello ${fullName}, you have successfully registered to bookmyfest.in app.`;
+    const finalRole = result.newUser.role;
+    let welcomeSubject = '';
+    let welcomeMsg = '';
+    let welcomeMsgHtml = '';
 
-    // Asynchronous send (do not block the response)
-    sendEmailNotification(email, welcomeSubject, welcomeMsg);
-    if (phone) {
-      sendWhatsAppNotification(phone, welcomeMsg);
+    if (finalRole === 'student') {
+      welcomeSubject = 'Welcome to BookmyFest!';
+      const displayId = studentId ? studentId.trim() : 'N/A';
+      welcomeMsg = `Hello ${fullName}, thank you, you have successfully registered with your student ID (${displayId}) in to bookmyfest.co.`;
+      welcomeMsgHtml = `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.025);">
+          <div style="text-align: center; border-bottom: 2px solid #6366f1; padding-bottom: 20px; margin-bottom: 25px;">
+            <h2 style="color: #4f46e5; margin: 0; font-size: 24px; font-weight: 700;">Welcome to BookmyFest!</h2>
+          </div>
+          <div style="font-size: 16px; color: #334155; line-height: 1.6;">
+            <p>Hello <strong>${fullName}</strong>,</p>
+            <p style="font-size: 18px; color: #0f172a; font-weight: 600; margin: 24px 0;">
+              Thank you, you have successfully registered with your student ID (<strong>${displayId}</strong>) in to <strong>bookmyfest.co</strong>.
+            </p>
+            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 25px 0;" />
+            <p style="font-size: 13px; color: #64748b;">
+              If you did not initiate this registration, please contact our support team.
+            </p>
+          </div>
+          <div style="text-align: center; margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 20px; font-size: 12px; color: #94a3b8;">
+            <p>&copy; ${new Date().getFullYear()} BookmyFest. All rights reserved.</p>
+          </div>
+        </div>
+      `;
+    } else if (finalRole === 'super_admin') {
+      welcomeSubject = 'Welcome to BookmyFest - Admin Account Created';
+      welcomeMsg = `Hello ${fullName}, thank you, you have successfully registered with your admin ID (${email}) in to bookmyfest.co.`;
+      welcomeMsgHtml = `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.025);">
+          <div style="text-align: center; border-bottom: 2px solid #6366f1; padding-bottom: 20px; margin-bottom: 25px;">
+            <h2 style="color: #4f46e5; margin: 0; font-size: 24px; font-weight: 700;">Welcome to BookmyFest!</h2>
+          </div>
+          <div style="font-size: 16px; color: #334155; line-height: 1.6;">
+            <p>Hello <strong>${fullName}</strong>,</p>
+            <p style="font-size: 18px; color: #0f172a; font-weight: 600; margin: 24px 0;">
+              Thank you, you have successfully registered with your admin ID (<strong>${email}</strong>) in to <strong>bookmyfest.co</strong>.
+            </p>
+            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 25px 0;" />
+            <p style="font-size: 13px; color: #64748b;">
+              If you did not initiate this registration, please contact our support team.
+            </p>
+          </div>
+          <div style="text-align: center; margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 20px; font-size: 12px; color: #94a3b8;">
+            <p>&copy; ${new Date().getFullYear()} BookmyFest. All rights reserved.</p>
+          </div>
+        </div>
+      `;
+    } else if (finalRole === 'coordinator') {
+      welcomeSubject = 'Registration Received - BookmyFest';
+      welcomeMsg = `Hello ${fullName}, thank you, your coordinator ID (${email}) is created but verification is pending from the Faculty. Once verified, you will receive a confirmation email.`;
+      welcomeMsgHtml = `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.025);">
+          <div style="text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 25px;">
+            <h2 style="color: #64748b; margin: 0; font-size: 24px; font-weight: 700;">Registration Received</h2>
+          </div>
+          <div style="font-size: 16px; color: #334155; line-height: 1.6;">
+            <p>Hello <strong>${fullName}</strong>,</p>
+            <p style="font-size: 17px; color: #0f172a; font-weight: 600; margin: 24px 0;">
+              Thank you, your coordinator ID (<strong>${email}</strong>) is created but verification is pending from the Faculty.
+            </p>
+            <p>Once the Faculty Admin accepts/verifies your ID, you will receive a confirmation email indicating that you are successfully registered with bookmyfest.co.</p>
+            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 25px 0;" />
+            <p style="font-size: 13px; color: #64748b;">
+              Please hold tight while your college Faculty Admin reviews your proof of identification.
+            </p>
+          </div>
+          <div style="text-align: center; margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 20px; font-size: 12px; color: #94a3b8;">
+            <p>&copy; ${new Date().getFullYear()} BookmyFest. All rights reserved.</p>
+          </div>
+        </div>
+      `;
+    } else if (finalRole === 'faculty_admin') {
+      welcomeSubject = 'Registration Received - BookmyFest';
+      welcomeMsg = `Hello ${fullName}, thank you, your faculty ID (${email}) is created but verification is pending from the Admin. Once verified, you will receive a confirmation email.`;
+      welcomeMsgHtml = `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.025);">
+          <div style="text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 25px;">
+            <h2 style="color: #64748b; margin: 0; font-size: 24px; font-weight: 700;">Registration Received</h2>
+          </div>
+          <div style="font-size: 16px; color: #334155; line-height: 1.6;">
+            <p>Hello <strong>${fullName}</strong>,</p>
+            <p style="font-size: 17px; color: #0f172a; font-weight: 600; margin: 24px 0;">
+              Thank you, your faculty ID (<strong>${email}</strong>) is created but verification is pending from the Admin.
+            </p>
+            <p>Once the Super Admin accepts/verifies your ID, you will receive a confirmation email indicating that you are successfully registered with bookmyfest.co.</p>
+            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 25px 0;" />
+            <p style="font-size: 13px; color: #64748b;">
+              Please hold tight while the System Admin reviews your registration.
+            </p>
+          </div>
+          <div style="text-align: center; margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 20px; font-size: 12px; color: #94a3b8;">
+            <p>&copy; ${new Date().getFullYear()} BookmyFest. All rights reserved.</p>
+          </div>
+        </div>
+      `;
+    }
+
+    if (welcomeSubject) {
+      sendEmailNotification(email, welcomeSubject, welcomeMsg, welcomeMsgHtml);
+      if (phone) {
+        sendWhatsAppNotification(phone, welcomeMsg);
+      }
     }
 
     // 6. Return response (excluding password hash)
@@ -303,6 +403,35 @@ export const verifyCoordinator = async (req, res, next) => {
       }
     });
 
+    // Send welcome/approval email to coordinator
+    const welcomeSubject = 'Account Verified - BookmyFest';
+    const welcomeMsg = `Hello ${updatedUser.fullName}, your coordinator ID (${updatedUser.email}) is verified and now you are successfully registered with bookmyfest.co.`;
+    const welcomeMsgHtml = `
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.025);">
+        <div style="text-align: center; border-bottom: 2px solid #6366f1; padding-bottom: 20px; margin-bottom: 25px;">
+          <h2 style="color: #4f46e5; margin: 0; font-size: 24px; font-weight: 700;">Account Approved</h2>
+        </div>
+        <div style="font-size: 16px; color: #334155; line-height: 1.6;">
+          <p>Hello <strong>${updatedUser.fullName}</strong>,</p>
+          <p style="font-size: 18px; color: #0f172a; font-weight: 600; margin: 24px 0;">
+            Your coordinator ID (<strong>${updatedUser.email}</strong>) is verified and now you are successfully registered with <strong>bookmyfest.co</strong>.
+          </p>
+          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 25px 0;" />
+          <p style="font-size: 13px; color: #64748b;">
+            You can now log in to the application and start managing events!
+          </p>
+        </div>
+        <div style="text-align: center; margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 20px; font-size: 12px; color: #94a3b8;">
+          <p>&copy; ${new Date().getFullYear()} BookmyFest. All rights reserved.</p>
+        </div>
+      </div>
+    `;
+
+    sendEmailNotification(updatedUser.email, welcomeSubject, welcomeMsg, welcomeMsgHtml);
+    if (updatedUser.phone) {
+      sendWhatsAppNotification(updatedUser.phone, welcomeMsg);
+    }
+
     res.status(200).json({
       success: true,
       message: 'Coordinator verified successfully',
@@ -367,6 +496,35 @@ export const verifyFaculty = async (req, res, next) => {
       where: { id: userId },
       data: { isVerified: true }
     });
+
+    // Send welcome/approval email to faculty
+    const welcomeSubject = 'Account Verified - BookmyFest';
+    const welcomeMsg = `Hello ${updatedUser.fullName}, your faculty ID (${updatedUser.email}) is verified and now you are successfully registered with bookmyfest.co.`;
+    const welcomeMsgHtml = `
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.025);">
+        <div style="text-align: center; border-bottom: 2px solid #6366f1; padding-bottom: 20px; margin-bottom: 25px;">
+          <h2 style="color: #4f46e5; margin: 0; font-size: 24px; font-weight: 700;">Account Approved</h2>
+        </div>
+        <div style="font-size: 16px; color: #334155; line-height: 1.6;">
+          <p>Hello <strong>${updatedUser.fullName}</strong>,</p>
+          <p style="font-size: 18px; color: #0f172a; font-weight: 600; margin: 24px 0;">
+            Your faculty ID (<strong>${updatedUser.email}</strong>) is verified and now you are successfully registered with <strong>bookmyfest.co</strong>.
+          </p>
+          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 25px 0;" />
+          <p style="font-size: 13px; color: #64748b;">
+            You can now log in to the application and start approving coordinators!
+          </p>
+        </div>
+        <div style="text-align: center; margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 20px; font-size: 12px; color: #94a3b8;">
+          <p>&copy; ${new Date().getFullYear()} BookmyFest. All rights reserved.</p>
+        </div>
+      </div>
+    `;
+
+    sendEmailNotification(updatedUser.email, welcomeSubject, welcomeMsg, welcomeMsgHtml);
+    if (updatedUser.phone) {
+      sendWhatsAppNotification(updatedUser.phone, welcomeMsg);
+    }
 
     res.status(200).json({
       success: true,
@@ -541,10 +699,15 @@ const storage = multer.diskStorage({
 // Multer Upload Setup
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB file size limit
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB file size limit
   fileFilter: (req, file, cb) => {
+    console.log('[Multer fileFilter] Received file metadata:', {
+      fieldname: file.fieldname,
+      originalname: file.originalname,
+      mimetype: file.mimetype
+    });
     const filetypes = /pdf/;
-    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    const extname = filetypes.test(path.extname(file.originalname || '').toLowerCase());
 
     if (extname) {
       return cb(null, true);
@@ -556,11 +719,14 @@ const upload = multer({
 // Export uploadFile controller
 export const uploadFile = (req, res, next) => {
   upload(req, res, (err) => {
+    if (err) {
+      console.error('[Multer upload error]:', err);
+    }
     if (err instanceof multer.MulterError) {
       if (err.code === 'LIMIT_FILE_SIZE') {
         return res.status(400).json({
           success: false,
-          message: 'File is too large. Maximum size allowed is 15MB.'
+          message: 'File is too large. Maximum size allowed is 20MB.'
         });
       }
       return res.status(400).json({ success: false, message: err.message });
@@ -569,9 +735,11 @@ export const uploadFile = (req, res, next) => {
     }
 
     if (!req.file) {
+      console.warn('[Multer upload warning]: No file attached in req.file');
       return res.status(400).json({ success: false, message: 'Please select a PDF file to upload.' });
     }
 
+    console.log('[Multer upload success] Saved file:', req.file.filename);
     // Dynamic host-based static link resolution
     const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
 

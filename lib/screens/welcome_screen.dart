@@ -124,7 +124,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     try {
       await Future.wait([
         precacheImage(const AssetImage('assets/images/welcome.png'), context),
-        precacheImage(const AssetImage('assets/images/Logo.png'), context),
+        precacheImage(const AssetImage('assets/images/logo.png'), context),
       ]);
     } catch (e) {
       // Ignore image preloading failures to prevent freezing the app
@@ -170,7 +170,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           children: [
                             // Logo from assets
                             Image.asset(
-                              'assets/images/Logo.png',
+                              'assets/images/logo.png',
                               width: 140,
                               height: 140,
                               fit: BoxFit.contain,

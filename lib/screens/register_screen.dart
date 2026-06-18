@@ -218,7 +218,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _pickAndUploadResume() async {
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
+      FilePickerResult? result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
         withData: true,
@@ -234,10 +234,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
         throw Exception("Could not read file data. Please try another PDF.");
       }
 
-      // Strict 15MB size limit validation on client
-      const maxLimit = 15 * 1024 * 1024;
+      // Strict 20MB size limit validation on client
+      const maxLimit = 20 * 1024 * 1024;
       if (fileBytes.length > maxLimit) {
-        throw Exception("File size exceeds 15MB limit. Please choose a smaller PDF.");
+        throw Exception("File size exceeds 20MB limit. Please choose a smaller PDF.");
       }
 
       // Strict PDF extension validation on client
@@ -711,7 +711,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                                                   ? "Selected: $_uploadedResumeName"
                                                                   : (_resumeController.text.isNotEmpty
                                                                       ? "Resume Uploaded"
-                                                                      : "Upload CV PDF (Max 15MB, PDF Only)"),
+                                                                      : "Upload CV PDF (Max 20MB, PDF Only)"),
                                                               style: TextStyle(
                                                                 color: _resumeController.text.isNotEmpty
                                                                     ? Colors.green
