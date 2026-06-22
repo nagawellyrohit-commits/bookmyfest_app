@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'select_login_screen.dart';
+import '../services/sponsor_service.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -29,6 +31,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   bool _isNavigating = false;
   bool _isImageLoaded = false;
   bool _isPreloading = false;
+  final SponsorService _sponsorService = SponsorService();
+  List<dynamic> _sponsors = [];
 
   @override
   void initState() {
@@ -110,6 +114,20 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     _zoomOpacityAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(parent: _zoomController, curve: Curves.easeOutCubic),
     );
+    _loadSponsors();
+  }
+
+  Future<void> _loadSponsors() async {
+    try {
+      final data = await _sponsorService.fetchSponsors();
+      if (mounted) {
+        setState(() {
+          _sponsors = data;
+        });
+      }
+    } catch (e) {
+      debugPrint("Failed to load sponsors: $e");
+    }
   }
 
   @override
@@ -388,12 +406,206 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     ),
                   ),
 
-                  // Offset padding to raise the button above bottom illustrations/icons
-                  const SizedBox(height: 95),
+                  if (_sponsors.isNotEmpty) ...[
+                    const SizedBox(height: 0.5),
+                    const Text(
+                      "Our App Sponsors",
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF64748B),
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const SizedBox(height: 0),
+                    _SponsorshipMarquee(sponsors: _sponsors),
+                  ],
+                  const SizedBox(height: 80),
                 ],
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _SponsorshipMarquee extends StatefulWidget {
+  final List<dynamic> sponsors;
+  const _SponsorshipMarquee({required this.sponsors});
+
+  @override
+  State<_SponsorshipMarquee> createState() => _SponsorshipMarqueeState();
+}
+
+class _SponsorshipMarqueeState extends State<_SponsorshipMarquee> {
+  late final ScrollController _scrollController;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startScrolling();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  double _getSponsorWidth(dynamic sp) {
+    final logoUrl = sp['logoUrl']?.toString() ?? '';
+    final nameText = sp['name']?.toString() ?? '';
+    final nameImageUrl = sp['subtitle']?.toString() ?? '';
+
+    final bool hasLogo = logoUrl.isNotEmpty;
+    final bool hasNameText = nameText.isNotEmpty;
+    final bool hasNameImage = nameImageUrl.isNotEmpty && nameImageUrl.startsWith('http');
+
+    double width = 0;
+    if (hasLogo) width += 52;
+    if (hasLogo && (hasNameText || hasNameImage)) width += 6;
+    if (hasNameText) {
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: nameText,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+      )..layout();
+      width += textPainter.width.clamp(20.0, 180.0);
+    }
+    if (hasNameImage) width += 80;
+
+    return width + 16; // 8 padding on left and right (total 16)
+  }
+
+  void _startScrolling() {
+    _timer = Timer.periodic(const Duration(milliseconds: 30), (timer) {
+      if (!mounted) return;
+      if (_scrollController.hasClients) {
+        final currentPosition = _scrollController.position.pixels;
+        final double singleCycleWidth = widget.sponsors.fold(0.0, (sum, sp) => sum + _getSponsorWidth(sp));
+
+        double nextPosition = currentPosition + 0.8;
+        if (nextPosition >= singleCycleWidth) {
+          nextPosition -= singleCycleWidth;
+          _scrollController.jumpTo(nextPosition);
+        } else {
+          _scrollController.jumpTo(nextPosition);
+        }
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double singleCycleWidth = widget.sponsors.fold(0.0, (sum, sp) => sum + _getSponsorWidth(sp));
+    final screenWidth = MediaQuery.of(context).size.width;
+    final targetWidth = screenWidth + singleCycleWidth;
+    final repeatCount = (targetWidth / (singleCycleWidth > 0 ? singleCycleWidth : 1)).ceil() + 1;
+
+    final displayList = <dynamic>[];
+    for (int i = 0; i < repeatCount; i++) {
+      displayList.addAll(widget.sponsors);
+    }
+
+    return Container(
+      height: 85,
+      margin: const EdgeInsets.only(top: 0, bottom: 2),
+      color: Colors.transparent,
+      child: Center(
+        child: ListView.builder(
+          controller: _scrollController,
+          scrollDirection: Axis.horizontal,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          itemCount: displayList.length,
+          itemBuilder: (context, index) {
+            final sp = displayList[index];
+            final logoUrl = sp['logoUrl']?.toString() ?? '';
+            final nameText = sp['name']?.toString() ?? '';
+            final nameImageUrl = sp['subtitle']?.toString() ?? '';
+
+            final bool hasLogo = logoUrl.isNotEmpty;
+            final bool hasNameText = nameText.isNotEmpty;
+            final bool hasNameImage =
+                nameImageUrl.isNotEmpty && nameImageUrl.startsWith('http');
+
+            return Container(
+              width: _getSponsorWidth(sp),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (hasLogo) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        width: 52,
+                        height: 52,
+                        color: Colors.transparent,
+                        child: Image.network(
+                          logoUrl,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(
+                                Icons.broken_image_outlined,
+                                size: 24,
+                                color: Color(0xFF64748B),
+                              ),
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (hasLogo && (hasNameText || hasNameImage))
+                    const SizedBox(width: 6),
+                  if (hasNameText)
+                    Expanded(
+                      child: Text(
+                        nameText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                    )
+                  else if (hasNameImage)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        width: 80,
+                        height: 40,
+                        color: Colors.transparent,
+                        child: Image.network(
+                          nameImageUrl,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(
+                                Icons.broken_image_outlined,
+                                size: 20,
+                                color: Color(0xFF64748B),
+                              ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

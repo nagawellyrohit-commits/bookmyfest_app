@@ -7,6 +7,7 @@ import registrationRoutes from './routes/registrationRoutes.js';
 import attendanceRoutes from './routes/attendanceRoutes.js';
 import certificateRoutes from './routes/certificateRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import sponsorRoutes from './routes/sponsorRoutes.js';
 
 // Ensure uploads directory exists
 if (!fs.existsSync('uploads')) {
@@ -32,6 +33,7 @@ app.use('/api/events', registrationRoutes);
 app.use('/api/events', attendanceRoutes);
 app.use('/api/events', certificateRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/sponsors', sponsorRoutes);
 
 // Catch-all 404 route
 app.use((req, res) => {

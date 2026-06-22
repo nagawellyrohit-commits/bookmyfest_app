@@ -9,6 +9,7 @@ import '../services/auth_service.dart';
 import 'event_detail_screen.dart';
 import 'edit_profile_screen.dart';
 import 'welcome_screen.dart';
+import 'sponsor_management_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -317,6 +318,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
         actions: [
+          if (role == 'super_admin')
+            IconButton(
+              icon: const Icon(
+                Icons.business_rounded,
+                color: Colors.white,
+              ),
+              tooltip: "Manage Sponsors",
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SponsorManagementScreen(),
+                  ),
+                );
+              },
+            ),
           if (role == 'coordinator')
             IconButton(
               icon: const Icon(
