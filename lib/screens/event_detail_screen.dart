@@ -877,11 +877,11 @@ class _EventDetailScreenState extends State<EventDetailScreen>
             isScrollable: true,
             labelColor: AppTheme.primary,
             unselectedLabelColor: AppTheme.textSecondary,
-            tabs: const [
-              Tab(text: "Details"),
-              Tab(text: "Passes & Payments"),
-              Tab(text: "Attendance Log"),
-              Tab(text: "AI Certificate Theme"),
+            tabs: [
+              const Tab(text: "Details"),
+              Tab(text: "Passes & Payments (${_registrations.length})"),
+              const Tab(text: "Attendance Log"),
+              const Tab(text: "AI Certificate Theme"),
             ],
           ),
           Expanded(
@@ -1522,14 +1522,65 @@ class _EventDetailScreenState extends State<EventDetailScreen>
       return const Center(child: Text("No registrations recorded."));
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(20),
-      itemCount: _registrations.length,
-      itemBuilder: (_, index) {
-        final reg = _registrations[index];
-        final studentName = reg['user']?['fullName'] ?? 'N/A';
-        final status = reg['paymentStatus'];
-        final isPending = status == 'pending';
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            decoration: AppTheme.cardDecoration(),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Row(
+                  children: [
+                    Icon(
+                      Icons.people_alt_rounded,
+                      color: AppTheme.primary,
+                      size: 24,
+                    ),
+                    SizedBox(width: 12),
+                    Text(
+                      "Total Applications",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    "${_registrations.length}",
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.all(20),
+            itemCount: _registrations.length,
+            itemBuilder: (_, index) {
+              final reg = _registrations[index];
+              final studentName = reg['user']?['fullName'] ?? 'N/A';
+              final status = reg['paymentStatus'];
+              final isPending = status == 'pending';
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -1660,8 +1711,11 @@ class _EventDetailScreenState extends State<EventDetailScreen>
           ),
         );
       },
-    );
-  }
+    ),
+  ),
+],
+);
+}
 
   // 4. Coordinator Attendance Log Tab
   Widget _buildAttendanceTab(UserProvider user) {

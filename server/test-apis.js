@@ -177,6 +177,21 @@ async function runTests() {
     return logFail('Event registration', e);
   }
 
+  // 10b. Verify pending-payments endpoint returns this registration
+  try {
+    const pendingRes = await axios.get(`${API_URL}/events/pending-payments`, {
+      headers: { Authorization: `Bearer ${coordToken}` }
+    });
+    const match = pendingRes.data.data.find(r => r.id === regId);
+    if (match && match.paymentReference === 'UPI_REF_987654321') {
+      logSuccess('Verified /pending-payments endpoint returns the correct pending registration');
+    } else {
+      throw new Error('Pending registration not found in pending-payments list');
+    }
+  } catch (e) {
+    return logFail('Pending payments list verification', e);
+  }
+
   // 11. Coordinator approves payment (converts registration status: completed)
   try {
     await axios.post(`${API_URL}/events/${eventId}/registrations/${regId}/confirm`, {}, {

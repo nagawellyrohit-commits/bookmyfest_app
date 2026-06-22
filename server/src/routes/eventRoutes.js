@@ -11,12 +11,14 @@ import {
   approveEventDelete,
   rejectEventDelete
 } from '../controllers/eventController.js';
+import { getPendingPayments } from '../controllers/registrationController.js';
 import { authenticateToken, authorizeRoles } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 // Pending approvals list and actions (Faculty Admin / Super Admin)
 router.get('/pending-approvals', authenticateToken, authorizeRoles('faculty_admin', 'super_admin'), getPendingEventApprovals);
+router.get('/pending-payments', authenticateToken, authorizeRoles('coordinator', 'faculty_admin', 'super_admin'), getPendingPayments);
 router.post('/:id/approve-update', authenticateToken, authorizeRoles('faculty_admin', 'super_admin'), approveEventUpdate);
 router.post('/:id/reject-update', authenticateToken, authorizeRoles('faculty_admin', 'super_admin'), rejectEventUpdate);
 router.post('/:id/approve-delete', authenticateToken, authorizeRoles('faculty_admin', 'super_admin'), approveEventDelete);

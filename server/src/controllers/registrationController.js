@@ -292,3 +292,56 @@ export const unregisterFromEvent = async (req, res, next) => {
     next(error);
   }
 };
+
+// Get all pending payments for events belonging to the actor's college
+export const getPendingPayments = async (req, res, next) => {
+  const actor = req.user;
+
+  try {
+    let whereClause = {
+      paymentStatus: 'pending'
+    };
+
+    // If not super admin, restrict to college events
+    if (actor.role !== 'super_admin') {
+      whereClause.event = {
+        collegeId: actor.collegeId
+      };
+    }
+
+    const registrations = await prisma.registration.findMany({
+      where: whereClause,
+      include: {
+        event: {
+          select: {
+            id: true,
+            title: true
+          }
+        },
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            phone: true,
+            department: true,
+            college: {
+              select: { name: true }
+            }
+          }
+        }
+      },
+      orderBy: {
+        registrationDate: 'desc'
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      data: registrations
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};

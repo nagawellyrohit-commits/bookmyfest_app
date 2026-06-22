@@ -132,6 +132,9 @@ export const getAllEvents = async (req, res, next) => {
           where: {
             userId: actor.id
           }
+        },
+        _count: {
+          select: { registrations: true }
         }
       },
       orderBy: {
@@ -167,6 +170,9 @@ export const getEventById = async (req, res, next) => {
           where: {
             userId: actor.id
           }
+        },
+        _count: {
+          select: { registrations: true }
         }
       }
     });

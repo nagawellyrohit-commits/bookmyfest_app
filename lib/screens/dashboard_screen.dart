@@ -28,6 +28,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<dynamic> _jobProfiles = [];
   List<dynamic> _pendingCoordinators = [];
   List<dynamic> _pendingEventApprovals = [];
+  List<dynamic> _pendingPayments = [];
   List<dynamic> _allStudents = [];
   List<dynamic> _allFaculties = [];
   List<dynamic> _allCoordinators = [];
@@ -127,12 +128,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       }
 
+      // 5. Fetch Pending Payments for Coordinators
+      List<dynamic> fetchedPendingPayments = [];
+      if (role == 'coordinator') {
+        fetchedPendingPayments = await _eventService.getPendingPayments(token);
+      }
+
       if (mounted) {
         setState(() {
           _events = fetchedEvents;
           _jobProfiles = fetchedProfiles;
           _pendingCoordinators = fetchedPending;
           _pendingEventApprovals = fetchedEventApprovals;
+          _pendingPayments = fetchedPendingPayments;
           _allStudents = fetchedAllStudents;
           _allFaculties = fetchedAllFaculties;
           _allCoordinators = fetchedAllCoordinators;
@@ -716,6 +724,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
+                    isExpanded: true,
                     initialValue: _selectedCollegeFilter,
                     dropdownColor: AppTheme.surface,
                     style: const TextStyle(
@@ -754,6 +763,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: DropdownButtonFormField<String>(
+                    isExpanded: true,
                     initialValue: _selectedBranchFilter,
                     dropdownColor: AppTheme.surface,
                     style: const TextStyle(
@@ -836,65 +846,106 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: ev['isPaid']
-                                      ? AppTheme.accent.withValues(alpha: 0.15)
-                                      : AppTheme.primary.withValues(
-                                          alpha: 0.15,
-                                        ),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  ev['isPaid']
-                                      ? "PAID: ₹${ev['entryFee']}"
-                                      : "FREE",
-                                  style: TextStyle(
-                                    color: ev['isPaid']
-                                        ? AppTheme.accent
-                                        : AppTheme.primary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
                               Row(
                                 children: [
-                                  if (ev['branch'] != null) ...[
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue.withValues(
-                                          alpha: 0.15,
-                                        ),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        ev['branch'],
-                                        style: const TextStyle(
-                                          color: Colors.blue,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: ev['isPaid']
+                                          ? AppTheme.accent.withValues(alpha: 0.15)
+                                          : AppTheme.primary.withValues(
+                                              alpha: 0.15,
+                                            ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      ev['isPaid']
+                                          ? "PAID: ₹${ev['entryFee']}"
+                                          : "FREE",
+                                      style: TextStyle(
+                                        color: ev['isPaid']
+                                            ? AppTheme.accent
+                                            : AppTheme.primary,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
-                                  ],
-                                  Text(
-                                    ev['college']?['name'] ?? 'bookmyfest',
-                                    style: const TextStyle(
-                                      color: AppTheme.textSecondary,
-                                      fontSize: 12,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.people_alt_rounded,
+                                          color: Colors.green,
+                                          size: 14,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          "${ev['_count']?['registrations'] ?? 0}",
+                                          style: const TextStyle(
+                                            color: Colors.green,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
+                              ),
+                              Expanded(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    if (ev['branch'] != null) ...[
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue.withValues(
+                                            alpha: 0.15,
+                                          ),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          ev['branch'],
+                                          style: const TextStyle(
+                                            color: Colors.blue,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                    ],
+                                    Flexible(
+                                      child: Text(
+                                        ev['college']?['name'] ?? 'bookmyfest',
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                        style: const TextStyle(
+                                          color: AppTheme.textSecondary,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
@@ -1262,35 +1313,110 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Coordinator specific payment approval tab
   Widget _buildCoordinatorPaymentTab(UserProvider user) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.payments_rounded,
-            size: 60,
-            color: AppTheme.textSecondary,
+    if (_pendingPayments.isEmpty) {
+      return _buildEmptyStatePlaceholder(
+        icon: Icons.payments_rounded,
+        message: "No Pending Payments",
+        description: "All payments for your college events have been verified and confirmed.",
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(20),
+      itemCount: _pendingPayments.length,
+      itemBuilder: (context, index) {
+        final reg = _pendingPayments[index];
+        final eventTitle = reg['event']?['title'] ?? 'Unknown Event';
+        final studentName = reg['user']?['fullName'] ?? 'Unknown Student';
+        final paymentRef = reg['paymentReference'] ?? 'N/A';
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: AppTheme.cardDecoration(),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      studentName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Event: $eventTitle",
+                      style: const TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                    if (reg['user']?['phone'] != null)
+                      Text(
+                        "Phone: ${reg['user']['phone']}",
+                        style: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "UPI Reference: $paymentRef",
+                      style: const TextStyle(
+                        color: Colors.blue,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                ),
+                onPressed: () async {
+                  setState(() => _isLoadingData = true);
+                  try {
+                    await _eventService.confirmPayment(
+                      user.token!,
+                      reg['eventId'],
+                      reg['id'],
+                    );
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Payment confirmed successfully!"),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                    _fetchDashboardData(silent: true);
+                  } catch (e) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text("Error: $e"),
+                        backgroundColor: AppTheme.accent,
+                      ),
+                    );
+                  } finally {
+                    setState(() => _isLoadingData = false);
+                  }
+                },
+                child: const Text("Approve"),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          const Text(
-            "Paid Registrations Review",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40),
-            child: Text(
-              "Access individual event details in the main list to audit and approve student UPI payment references.",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

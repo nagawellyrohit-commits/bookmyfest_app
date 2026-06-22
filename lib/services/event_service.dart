@@ -187,6 +187,25 @@ class EventService {
     }
   }
 
+  // Fetch pending payment registrations (Coordinator/Admin view)
+  Future<List<dynamic>> getPendingPayments(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse("$baseUrl/events/pending-payments"),
+        headers: _headers(token),
+      );
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        return responseData['data'];
+      }
+      throw Exception(
+        responseData['message'] ?? 'Failed to load pending payments',
+      );
+    } catch (e) {
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
+    }
+  }
+
   // Confirm registration payment (Coordinator action)
   Future<void> confirmPayment(
     String token,
@@ -363,9 +382,7 @@ class EventService {
       if (response.statusCode == 200 && responseData['success'] == true) {
         return responseData['data'];
       }
-      throw Exception(
-        responseData['message'] ?? 'Failed to load students',
-      );
+      throw Exception(responseData['message'] ?? 'Failed to load students');
     } catch (e) {
       throw Exception(e.toString().replaceAll("Exception: ", ""));
     }
@@ -382,9 +399,7 @@ class EventService {
       if (response.statusCode == 200 && responseData['success'] == true) {
         return responseData['data'];
       }
-      throw Exception(
-        responseData['message'] ?? 'Failed to load faculties',
-      );
+      throw Exception(responseData['message'] ?? 'Failed to load faculties');
     } catch (e) {
       throw Exception(e.toString().replaceAll("Exception: ", ""));
     }
@@ -401,9 +416,7 @@ class EventService {
       if (response.statusCode == 200 && responseData['success'] == true) {
         return responseData['data'];
       }
-      throw Exception(
-        responseData['message'] ?? 'Failed to load coordinators',
-      );
+      throw Exception(responseData['message'] ?? 'Failed to load coordinators');
     } catch (e) {
       throw Exception(e.toString().replaceAll("Exception: ", ""));
     }
