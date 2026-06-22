@@ -31,6 +31,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _linkedinUrlController = TextEditingController();
   final _branchController = TextEditingController();
   final _passingYearController = TextEditingController();
+  bool _isParentOfStudent = false;
+  final _parentStudentNameController = TextEditingController();
+  final _parentStudentCollegeController = TextEditingController();
 
   final _formKey = GlobalKey<FormState>();
   final _authService = AuthService();
@@ -63,6 +66,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         return 'Faculty';
       case 'super_admin':
         return 'Super Admin';
+      case 'guest':
+        return 'Guest';
       default:
         return 'User';
     }
@@ -221,6 +226,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       final isSuperAdmin = _selectedRole == 'super_admin';
       final isStudent = _selectedRole == 'student';
+      final isGuest = _selectedRole == 'guest';
 
       await _authService.register(
         fullName: _fullNameController.text,
@@ -228,9 +234,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: _passwordController.text,
         phone: _phoneController.text,
         role: _selectedRole,
-        collegeName: !isSuperAdmin ? _collegeNameController.text : "N/A",
-        department: !isSuperAdmin ? _departmentController.text : "N/A",
-        idProofUrl: !isSuperAdmin && _idProofController.text.isNotEmpty
+        collegeName: (!isSuperAdmin && !isGuest) ? _collegeNameController.text : "N/A",
+        department: (!isSuperAdmin && !isGuest) ? _departmentController.text : "N/A",
+        idProofUrl: (!isSuperAdmin && !isGuest) && _idProofController.text.isNotEmpty
             ? _idProofController.text
             : "https://via.placeholder.com/150",
         isFinalYear: false,
@@ -262,6 +268,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         passingYear: isStudent && _passingYearController.text.isNotEmpty
             ? int.tryParse(_passingYearController.text)
             : null,
+        isParent: isGuest && _isParentOfStudent,
+        parentStudentName: isGuest && _isParentOfStudent ? _parentStudentNameController.text : null,
+        parentStudentCollege: isGuest && _isParentOfStudent ? _parentStudentCollegeController.text : null,
       );
 
       if (mounted) {
@@ -423,6 +432,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     final isSuperAdmin = _selectedRole == 'super_admin';
     final isStudent = _selectedRole == 'student';
+    final isGuest = _selectedRole == 'guest';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -618,8 +628,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               const SizedBox(height: 20),
                             ],
 
-                            // College Name (Only if NOT Super Admin)
-                            if (!isSuperAdmin) ...[
+                            // College Name (Only if NOT Super Admin and NOT Guest)
+                            if (!isSuperAdmin && !isGuest) ...[
                               TextFormField(
                                 controller: _collegeNameController,
                                 style: const TextStyle(
@@ -1007,6 +1017,95 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               const SizedBox(height: 20),
                             ],
 
+                            // Parent fields section for Guest
+                            if (isGuest) ...[
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
+                                  child: const Text(
+                                    "Are you a parent of a student?",
+                                    style: TextStyle(
+                                      color: Color(0xFF0F172A),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      child: RadioListTile<bool>(
+                                        contentPadding: EdgeInsets.zero,
+                                        title: const Text("Yes", style: TextStyle(fontSize: 14)),
+                                        value: true,
+                                        groupValue: _isParentOfStudent,
+                                        activeColor: _brandColor,
+                                        onChanged: (val) {
+                                          setState(() {
+                                            _isParentOfStudent = val!;
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      child: RadioListTile<bool>(
+                                        contentPadding: EdgeInsets.zero,
+                                        title: const Text("No", style: TextStyle(fontSize: 14)),
+                                        value: false,
+                                        groupValue: _isParentOfStudent,
+                                        activeColor: _brandColor,
+                                        onChanged: (val) {
+                                          setState(() {
+                                            _isParentOfStudent = val!;
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              if (_isParentOfStudent) ...[
+                                TextFormField(
+                                  controller: _parentStudentNameController,
+                                  style: const TextStyle(color: Color(0xFF1E293B)),
+                                  decoration: _lightInputDecoration(
+                                    labelText: "Student's Full Name",
+                                    prefixIcon: Icons.person_outline,
+                                  ),
+                                  validator: (val) {
+                                    if (_isParentOfStudent && (val == null || val.trim().isEmpty)) {
+                                      return "Please enter student's name";
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 20),
+                                TextFormField(
+                                  controller: _parentStudentCollegeController,
+                                  style: const TextStyle(color: Color(0xFF1E293B)),
+                                  decoration: _lightInputDecoration(
+                                    labelText: "Student's College Name",
+                                    prefixIcon: Icons.apartment_outlined,
+                                  ),
+                                  validator: (val) {
+                                    if (_isParentOfStudent && (val == null || val.trim().isEmpty)) {
+                                      return "Please enter student's college name";
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 20),
+                              ],
+                            ],
+
                             const SizedBox(height: 10),
 
                             // Sign Up Submit Button
@@ -1083,7 +1182,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 24),
+                      const Text(
+                        "BUILT FOR STUDENTS. POWERED BY RNI TECH",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color.fromARGB(255, 14, 14, 14),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),

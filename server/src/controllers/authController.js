@@ -28,7 +28,10 @@ export const register = async (req, res, next) => {
     instagramUrl,
     linkedinUrl,
     branch,
-    passingYear
+    passingYear,
+    isParent,
+    parentStudentName,
+    parentStudentCollege
   } = req.body;
 
   try {
@@ -157,8 +160,11 @@ export const register = async (req, res, next) => {
           department,
           idProofUrl,
           isFinalYear: !!isFinalYear,
-          isVerified: role === 'student', // Students verified by default; coordinators/admins need approval
-          studentId: role === 'student' && studentId ? studentId.trim() : null
+          isVerified: role === 'student' || role === 'guest', // Students and guests verified by default; coordinators/admins need approval
+          studentId: role === 'student' && studentId ? studentId.trim() : null,
+          isParent: role === 'guest' && (isParent === true || isParent === 'true'),
+          parentStudentName: role === 'guest' && parentStudentName ? parentStudentName.trim() : null,
+          parentStudentCollege: role === 'guest' && parentStudentCollege ? parentStudentCollege.trim() : null
         }
       });
 
@@ -279,6 +285,29 @@ export const register = async (req, res, next) => {
             <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 25px 0;" />
             <p style="font-size: 13px; color: #64748b;">
               Please hold tight while the System Admin reviews your registration.
+            </p>
+          </div>
+          <div style="text-align: center; margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 20px; font-size: 12px; color: #94a3b8;">
+            <p>&copy; ${new Date().getFullYear()} BookmyFest. All rights reserved.</p>
+          </div>
+        </div>
+      `;
+    } else if (finalRole === 'guest') {
+      welcomeSubject = 'Welcome to BookmyFest - Guest Account Created';
+      welcomeMsg = `Hello ${fullName}, thank you, you have successfully registered as a Guest with email (${email}) on bookmyfest.co.`;
+      welcomeMsgHtml = `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.025);">
+          <div style="text-align: center; border-bottom: 2px solid #6366f1; padding-bottom: 20px; margin-bottom: 25px;">
+            <h2 style="color: #4f46e5; margin: 0; font-size: 24px; font-weight: 700;">Welcome to BookmyFest!</h2>
+          </div>
+          <div style="font-size: 16px; color: #334155; line-height: 1.6;">
+            <p>Hello <strong>${fullName}</strong>,</p>
+            <p style="font-size: 18px; color: #0f172a; font-weight: 600; margin: 24px 0;">
+              Thank you, you have successfully registered as a Guest with your email (<strong>${email}</strong>) on <strong>bookmyfest.co</strong>.
+            </p>
+            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 25px 0;" />
+            <p style="font-size: 13px; color: #64748b;">
+              You can now browse events from all colleges!
             </p>
           </div>
           <div style="text-align: center; margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 20px; font-size: 12px; color: #94a3b8;">

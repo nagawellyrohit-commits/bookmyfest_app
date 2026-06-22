@@ -40,6 +40,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
 
   // New Event Fields
   final _branchController = TextEditingController(text: "Open");
+  final _categoryController = TextEditingController(text: "Other");
   final _brochureUrlController = TextEditingController();
   final _brochurePagesController = TextEditingController(text: "0");
   final _posterUrl1Controller = TextEditingController();
@@ -86,6 +87,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
     _feeController.dispose();
     _upiController.dispose();
     _branchController.dispose();
+    _categoryController.dispose();
     _brochureUrlController.dispose();
     _brochurePagesController.dispose();
     _posterUrl1Controller.dispose();
@@ -146,6 +148,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
           _eventDate = DateTime.parse(data['eventDate']);
           _deadline = DateTime.parse(data['registrationDeadline']);
           _branchController.text = data['branch'] ?? 'Open';
+          _categoryController.text = data['category'] ?? 'Other';
           _brochureUrlController.text = data['brochureUrl'] ?? '';
           _brochurePagesController.text = (data['brochurePages'] ?? 0)
               .toString();
@@ -233,6 +236,9 @@ class _EventDetailScreenState extends State<EventDetailScreen>
         "branch": _branchController.text.trim().isEmpty
             ? "Open"
             : _branchController.text.trim(),
+        "category": _categoryController.text.trim().isEmpty
+            ? "Other"
+            : _categoryController.text.trim(),
         "brochureUrl": _brochureUrlController.text.trim().isEmpty
             ? null
             : _brochureUrlController.text.trim(),
@@ -387,6 +393,9 @@ class _EventDetailScreenState extends State<EventDetailScreen>
         "branch": _branchController.text.trim().isEmpty
             ? "Open"
             : _branchController.text.trim(),
+        "category": _categoryController.text.trim().isEmpty
+            ? "Other"
+            : _categoryController.text.trim(),
         "brochureUrl": _brochureUrlController.text.trim().isEmpty
             ? null
             : _brochureUrlController.text.trim(),
@@ -597,6 +606,14 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                   decoration: AppTheme.inputDecoration(
                     labelText: "Branch Focus (e.g. CSE, ECE, Open)",
                     prefixIcon: Icons.school_outlined,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: _categoryController,
+                  decoration: AppTheme.inputDecoration(
+                    labelText: "Event Category (e.g. Football, Cricket, Hackathon)",
+                    prefixIcon: Icons.category_outlined,
                   ),
                 ),
                 const SizedBox(height: 20),

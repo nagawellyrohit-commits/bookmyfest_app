@@ -23,7 +23,8 @@ export const createEvent = async (req, res, next) => {
     whatsAppGroupLink,
     eventType,
     minMembers,
-    maxMembers
+    maxMembers,
+    category
   } = req.body;
 
   try {
@@ -72,6 +73,7 @@ export const createEvent = async (req, res, next) => {
         upiId: isPaid ? upiId : null,
         qrAttendanceCode,
         branch: branch || 'Open',
+        category: category || 'Other',
         brochureUrl: brochureUrl || null,
         brochurePages: brochurePagesNum,
         posterUrl1: posterUrl1 || null,
@@ -259,6 +261,7 @@ export const updateEvent = async (req, res, next) => {
       finalData.upiId = updateData.isPaid ? updateData.upiId : null;
     }
     if (updateData.branch !== undefined) finalData.branch = updateData.branch;
+    if (updateData.category !== undefined) finalData.category = updateData.category;
     if (updateData.brochureUrl !== undefined) finalData.brochureUrl = updateData.brochureUrl;
     if (updateData.brochurePages !== undefined) finalData.brochurePages = Number(updateData.brochurePages);
     if (updateData.posterUrl1 !== undefined) finalData.posterUrl1 = updateData.posterUrl1;
@@ -412,6 +415,7 @@ export const approveEventUpdate = async (req, res, next) => {
       finalData.upiId = updates.isPaid ? updates.upiId : null;
     }
     if (updates.branch !== undefined) finalData.branch = updates.branch;
+    if (updates.category !== undefined) finalData.category = updates.category;
     if (updates.brochureUrl !== undefined) finalData.brochureUrl = updates.brochureUrl;
     if (updates.brochurePages !== undefined) finalData.brochurePages = Number(updates.brochurePages);
     if (updates.posterUrl1 !== undefined) finalData.posterUrl1 = updates.posterUrl1;

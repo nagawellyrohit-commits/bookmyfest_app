@@ -34,10 +34,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<dynamic> _allFaculties = [];
   List<dynamic> _allCoordinators = [];
 
+  // Inline action tracking for quick/instant feedback
+  final Set<String> _approvedIds = {};
+  final Set<String> _processingIds = {};
+
   // Search and Filters
   String _searchQuery = "";
   String? _selectedCollegeFilter;
-  String? _selectedBranchFilter;
+  String? _selectedCategoryFilter;
 
   Timer? _countdownTimer;
 
@@ -145,6 +149,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _allStudents = fetchedAllStudents;
           _allFaculties = fetchedAllFaculties;
           _allCoordinators = fetchedAllCoordinators;
+          _processingIds.clear();
+          _approvedIds.clear();
         });
       }
     } catch (e) {
@@ -303,7 +309,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         (role == 'faculty_admin' || role == 'coordinator') && !user.isVerified;
 
     // Clamping index to prevent out-of-bounds errors on role transitions/hot-reload
-    final expectedLength = role == 'super_admin' ? 5 : 3;
+    final expectedLength = role == 'super_admin' ? 5 : (role == 'guest' ? 2 : 3);
     if (_currentIndex >= expectedLength) {
       _currentIndex = 0;
     }
@@ -624,6 +630,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       );
+    } else if (role == 'guest') {
+      return NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: _changeTab,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.event_note_rounded),
+            label: "Browse Events",
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline_rounded),
+            label: "Profile",
+          ),
+        ],
+      );
     }
     return null;
   }
@@ -673,6 +694,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         case 4:
           return _buildSuperAdminJobProfilesTab(user);
       }
+    } else if (role == 'guest') {
+      switch (_currentIndex) {
+        case 0:
+          return _buildEventsTab(isStudentView: true);
+        case 1:
+          return _buildStudentProfileTab(user);
+      }
     }
     return const Center(child: Text("Unknown Role Page"));
   }
@@ -683,6 +711,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     bool isFacultyOversight = false,
     bool isSuperAdminView = false,
   }) {
+    final role = Provider.of<UserProvider>(context, listen: false).role;
     final colleges = _events
         .map((e) => e['college']?['name']?.toString())
         .where((name) => name != null && name.isNotEmpty)
@@ -690,9 +719,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         .toSet()
         .toList();
 
-    final branches = _events
-        .map((e) => e['branch']?.toString())
-        .where((branch) => branch != null && branch.isNotEmpty)
+    final categories = _events
+        .map((e) => e['category']?.toString())
+        .where((cat) => cat != null && cat.isNotEmpty)
         .cast<String>()
         .toSet()
         .toList();
@@ -708,8 +737,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ev['college']?['name'] != _selectedCollegeFilter) {
         return false;
       }
-      if (_selectedBranchFilter != null &&
-          ev['branch'] != _selectedBranchFilter) {
+      if (_selectedCategoryFilter != null &&
+          ev['category'] != _selectedCategoryFilter) {
         return false;
       }
       return true;
@@ -781,7 +810,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     isExpanded: true,
-                    initialValue: _selectedBranchFilter,
+                    initialValue: _selectedCategoryFilter,
                     dropdownColor: AppTheme.surface,
                     style: const TextStyle(
                       color: AppTheme.textPrimary,
@@ -789,8 +818,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     decoration:
                         AppTheme.inputDecoration(
-                          labelText: "Branch",
-                          prefixIcon: Icons.school_outlined,
+                          labelText: "Event",
+                          prefixIcon: Icons.category_outlined,
                         ).copyWith(
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 12,
@@ -801,19 +830,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       const DropdownMenuItem(
                         value: null,
                         child: Text(
-                          "All Branches",
+                          "All Events",
                           style: TextStyle(fontSize: 12),
                         ),
                       ),
-                      ...branches.map(
-                        (b) => DropdownMenuItem(
-                          value: b,
-                          child: Text(b, style: const TextStyle(fontSize: 12)),
+                      ...categories.map(
+                        (c) => DropdownMenuItem(
+                          value: c,
+                          child: Text(c, style: const TextStyle(fontSize: 12)),
                         ),
                       ),
                     ],
                     onChanged: (val) =>
-                        setState(() => _selectedBranchFilter = val),
+                        setState(() => _selectedCategoryFilter = val),
                   ),
                 ),
               ],
@@ -1054,7 +1083,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                                 child: Text(
                                   isStudentView
-                                      ? "Details & Register"
+                                      ? (role == 'guest' ? "View Details" : "Details & Register")
                                       : "Manage & Audit",
                                 ),
                               ),
@@ -1221,41 +1250,73 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 16),
 
                 // Details
-                _profileDetailItem(
-                  Icons.email_outlined,
-                  "Email",
-                  user.email ?? 'N/A',
-                ),
-                _profileDetailItem(
-                  Icons.phone_outlined,
-                  "Phone",
-                  user.phone ?? 'N/A',
-                ),
-                _profileDetailItem(
-                  Icons.apartment_outlined,
-                  "College",
-                  user.collegeName ?? 'N/A',
-                ),
-                _profileDetailItem(
-                  Icons.badge_outlined,
-                  "Department",
-                  user.department ?? 'N/A',
-                ),
-                _profileDetailItem(
-                  Icons.verified_outlined,
-                  "Status",
-                  user.isVerified ? "Verified" : "Pending Verification",
-                  color: user.isVerified ? Colors.green : AppTheme.accent,
-                ),
-                if (user.isFinalYear) ...[
+                if (user.role == 'guest') ...[
                   _profileDetailItem(
-                    Icons.work_outline_rounded,
-                    "Final Year Collector",
-                    "Enabled",
+                    Icons.email_outlined,
+                    "Email",
+                    user.email ?? 'N/A',
                   ),
+                  _profileDetailItem(
+                    Icons.phone_outlined,
+                    "Phone",
+                    user.phone ?? 'N/A',
+                  ),
+                  _profileDetailItem(
+                    Icons.family_restroom_rounded,
+                    "Parent of Student?",
+                    user.isParent ? "Yes" : "No",
+                    color: user.isParent ? Colors.green : Colors.grey,
+                  ),
+                  if (user.isParent) ...[
+                    _profileDetailItem(
+                      Icons.person_outline,
+                      "Student Name",
+                      user.parentStudentName ?? 'N/A',
+                    ),
+                    _profileDetailItem(
+                      Icons.apartment_outlined,
+                      "Student College",
+                      user.parentStudentCollege ?? 'N/A',
+                    ),
+                  ],
+                ] else ...[
+                  _profileDetailItem(
+                    Icons.email_outlined,
+                    "Email",
+                    user.email ?? 'N/A',
+                  ),
+                  _profileDetailItem(
+                    Icons.phone_outlined,
+                    "Phone",
+                    user.phone ?? 'N/A',
+                  ),
+                  _profileDetailItem(
+                    Icons.apartment_outlined,
+                    "College",
+                    user.collegeName ?? 'N/A',
+                  ),
+                  _profileDetailItem(
+                    Icons.badge_outlined,
+                    "Department",
+                    user.department ?? 'N/A',
+                  ),
+                  _profileDetailItem(
+                    Icons.verified_outlined,
+                    "Status",
+                    user.isVerified ? "Verified" : "Pending Verification",
+                    color: user.isVerified ? Colors.green : AppTheme.accent,
+                  ),
+                  if (user.isFinalYear) ...[
+                    _profileDetailItem(
+                      Icons.work_outline_rounded,
+                      "Final Year Collector",
+                      "Enabled",
+                    ),
+                  ],
                 ],
                 const SizedBox(height: 24),
-                ElevatedButton.icon(
+                if (user.role != 'guest')
+                  ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primary,
                     minimumSize: const Size.fromHeight(50),
@@ -1392,44 +1453,86 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
               ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                ),
-                onPressed: () async {
-                  setState(() => _isLoadingData = true);
-                  try {
-                    await _eventService.confirmPayment(
-                      user.token!,
-                      reg['eventId'],
-                      reg['id'],
-                    );
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Payment confirmed successfully!"),
-                        backgroundColor: Colors.green,
+              (() {
+                final String regId = reg['id'];
+                final bool isApproved = _approvedIds.contains(regId);
+                final bool isProcessing = _processingIds.contains(regId);
+
+                if (isApproved) {
+                  return const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
+                      SizedBox(width: 4),
+                      Text(
+                        "Approved",
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       ),
-                    );
-                    _fetchDashboardData(silent: true);
-                  } catch (e) {
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text("Error: $e"),
-                        backgroundColor: AppTheme.accent,
+                    ],
+                  );
+                } else if (isProcessing) {
+                  return const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                    ),
+                  );
+                } else {
+                  return ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
                       ),
-                    );
-                  } finally {
-                    setState(() => _isLoadingData = false);
-                  }
-                },
-                child: const Text("Approve"),
-              ),
+                    ),
+                    onPressed: () async {
+                      setState(() {
+                        _processingIds.add(regId);
+                      });
+                      try {
+                        await _eventService.confirmPayment(
+                          user.token!,
+                          reg['eventId'],
+                          regId,
+                        );
+                        if (mounted) {
+                          setState(() {
+                            _processingIds.remove(regId);
+                            _approvedIds.add(regId);
+                          });
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Payment confirmed successfully!"),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                        _fetchDashboardData(silent: true);
+                      } catch (e) {
+                        if (mounted) {
+                          setState(() {
+                            _processingIds.remove(regId);
+                          });
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            SnackBar(
+                              content: Text("Error: $e"),
+                              backgroundColor: AppTheme.accent,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    child: const Text("Approve"),
+                  );
+                }
+              })(),
             ],
           ),
         );
@@ -1580,125 +1683,192 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Container(height: 1, color: Colors.white.withValues(alpha: 0.05)),
               const SizedBox(height: 16),
 
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      onPressed: () async {
-                        try {
-                          await _authService.verifyCoordinator(
-                            user.token!,
-                            coord['id'],
-                          );
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                isDeletionPending
-                                    ? "Coordinator deletion request rejected. Coordinator kept active."
-                                    : "Coordinator approved successfully!",
-                              ),
-                              backgroundColor: Colors.green,
+              (() {
+                final String coordId = coord['id'];
+                final bool isApproved = _approvedIds.contains(coordId);
+                final bool isProcessing = _processingIds.contains(coordId);
+
+                if (isApproved) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
+                          const SizedBox(width: 6),
+                          Text(
+                            isDeletionPending ? "Deletion Approved" : "Approved",
+                            style: const TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
                             ),
-                          );
-                          _fetchDashboardData();
-                        } catch (e) {
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text("Error: $e"),
-                              backgroundColor: AppTheme.accent,
-                            ),
-                          );
-                        }
-                      },
-                      child: Text(
-                        isDeletionPending ? "Keep Coordinator" : "Approve",
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.accent,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                  );
+                } else if (isProcessing) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8.0),
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                        ),
                       ),
-                      onPressed: () async {
-                        final confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: Text(
-                              isDeletionPending
-                                  ? "Confirm Account Deletion"
-                                  : "Reject/Delete Coordinator",
-                            ),
-                            content: Text(
-                              isDeletionPending
-                                  ? "Are you sure you want to permanently delete this coordinator account? This action cannot be undone."
-                                  : "Are you sure you want to delete and reject this coordinator registration?",
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text("Cancel"),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: Text(
-                                  isDeletionPending
-                                      ? "Delete Account"
-                                      : "Delete",
-                                  style: const TextStyle(
-                                    color: AppTheme.accent,
-                                  ),
-                                ),
-                              ),
-                            ],
+                    ),
+                  );
+                } else {
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
-                        );
-                        if (confirm == true) {
-                          try {
-                            await _authService.deleteCoordinator(
-                              user.token!,
-                              coord['id'],
-                            );
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
+                          onPressed: () async {
+                            setState(() {
+                              _processingIds.add(coordId);
+                            });
+                            try {
+                              await _authService.verifyCoordinator(
+                                user.token!,
+                                coordId,
+                              );
+                              if (mounted) {
+                                setState(() {
+                                  _processingIds.remove(coordId);
+                                  _approvedIds.add(coordId);
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      isDeletionPending
+                                          ? "Coordinator deletion request rejected. Coordinator kept active."
+                                          : "Coordinator approved successfully!",
+                                    ),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
+                              _fetchDashboardData(silent: true);
+                            } catch (e) {
+                              if (mounted) {
+                                setState(() {
+                                  _processingIds.remove(coordId);
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text("Error: $e"),
+                                    backgroundColor: AppTheme.accent,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          child: Text(
+                            isDeletionPending ? "Keep Coordinator" : "Approve",
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.accent,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          onPressed: () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: Text(
+                                  isDeletionPending
+                                      ? "Confirm Account Deletion"
+                                      : "Reject/Delete Coordinator",
+                                ),
                                 content: Text(
                                   isDeletionPending
-                                      ? "Coordinator account permanently deleted!"
-                                      : "Coordinator deleted successfully!",
+                                      ? "Are you sure you want to permanently delete this coordinator account? This action cannot be undone."
+                                      : "Are you sure you want to delete and reject this coordinator registration?",
                                 ),
-                                backgroundColor: Colors.green,
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, false),
+                                    child: const Text("Cancel"),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, true),
+                                    child: Text(
+                                      isDeletionPending
+                                          ? "Delete Account"
+                                          : "Delete",
+                                      style: const TextStyle(
+                                        color: AppTheme.accent,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             );
-                            _fetchDashboardData();
-                          } catch (e) {
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text("Error: $e"),
-                                backgroundColor: AppTheme.accent,
-                              ),
-                            );
-                          }
-                        }
-                      },
-                      child: Text(
-                        isDeletionPending
-                            ? "Approve Deletion"
-                            : "Reject/Delete",
+                            if (confirm == true && mounted) {
+                              setState(() {
+                                _processingIds.add(coordId);
+                              });
+                              try {
+                                await _authService.deleteCoordinator(
+                                  user.token!,
+                                  coordId,
+                                );
+                                if (mounted) {
+                                  setState(() {
+                                    _processingIds.remove(coordId);
+                                    _approvedIds.add(coordId);
+                                  });
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        isDeletionPending
+                                            ? "Coordinator account permanently deleted!"
+                                            : "Coordinator deleted successfully!",
+                                      ),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                                _fetchDashboardData(silent: true);
+                              } catch (e) {
+                                if (mounted) {
+                                  setState(() {
+                                    _processingIds.remove(coordId);
+                                  });
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text("Error: $e"),
+                                      backgroundColor: AppTheme.accent,
+                                    ),
+                                  );
+                                }
+                              }
+                            }
+                          },
+                          child: Text(
+                            isDeletionPending
+                                ? "Approve Deletion"
+                                : "Reject/Delete",
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ],
-              ),
+                    ],
+                  );
+                }
+              })(),
             ],
           ),
         );
@@ -2028,107 +2198,184 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 }),
               ],
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: () async {
-                        try {
-                          if (isDeletion) {
-                            await _eventService.approveEventDelete(
-                              user.token!,
-                              ev['id'],
-                            );
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Event deletion approved!"),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-                          } else {
-                            await _eventService.approveEventUpdate(
-                              user.token!,
-                              ev['id'],
-                            );
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Event updates approved!"),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-                          }
-                          _fetchDashboardData();
-                        } catch (e) {
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text("Error: $e"),
-                              backgroundColor: AppTheme.accent,
+              (() {
+                final String evId = ev['id'];
+                final bool isApproved = _approvedIds.contains(evId);
+                final bool isProcessing = _processingIds.contains(evId);
+
+                if (isApproved) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
+                          const SizedBox(width: 6),
+                          Text(
+                            isDeletion ? "Deletion Approved" : "Updates Approved",
+                            style: const TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
                             ),
-                          );
-                        }
-                      },
-                      child: const Text("Approve"),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.accent,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                        ],
                       ),
-                      onPressed: () async {
-                        try {
-                          if (isDeletion) {
-                            await _eventService.rejectEventDelete(
-                              user.token!,
-                              ev['id'],
-                            );
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  "Event deletion request rejected!",
-                                ),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-                          } else {
-                            await _eventService.rejectEventUpdate(
-                              user.token!,
-                              ev['id'],
-                            );
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Event updates rejected!"),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-                          }
-                          _fetchDashboardData();
-                        } catch (e) {
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text("Error: $e"),
-                              backgroundColor: AppTheme.accent,
-                            ),
-                          );
-                        }
-                      },
-                      child: const Text("Reject"),
                     ),
-                  ),
-                ],
-              ),
+                  );
+                } else if (isProcessing) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8.0),
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                        ),
+                      ),
+                    ),
+                  );
+                } else {
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          onPressed: () async {
+                            setState(() {
+                              _processingIds.add(evId);
+                            });
+                            try {
+                              if (isDeletion) {
+                                await _eventService.approveEventDelete(
+                                  user.token!,
+                                  evId,
+                                );
+                                if (mounted) {
+                                  setState(() {
+                                    _processingIds.remove(evId);
+                                    _approvedIds.add(evId);
+                                  });
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Event deletion approved!"),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              } else {
+                                await _eventService.approveEventUpdate(
+                                  user.token!,
+                                  evId,
+                                );
+                                if (mounted) {
+                                  setState(() {
+                                    _processingIds.remove(evId);
+                                    _approvedIds.add(evId);
+                                  });
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Event updates approved!"),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              }
+                              _fetchDashboardData(silent: true);
+                            } catch (e) {
+                              if (mounted) {
+                                setState(() {
+                                  _processingIds.remove(evId);
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text("Error: $e"),
+                                    backgroundColor: AppTheme.accent,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          child: const Text("Approve"),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.accent,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          onPressed: () async {
+                            setState(() {
+                              _processingIds.add(evId);
+                            });
+                            try {
+                              if (isDeletion) {
+                                await _eventService.rejectEventDelete(
+                                  user.token!,
+                                  evId,
+                                );
+                                if (mounted) {
+                                  setState(() {
+                                    _processingIds.remove(evId);
+                                    _approvedIds.add(evId);
+                                  });
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        "Event deletion request rejected!",
+                                      ),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              } else {
+                                await _eventService.rejectEventUpdate(
+                                  user.token!,
+                                  evId,
+                                );
+                                if (mounted) {
+                                  setState(() {
+                                    _processingIds.remove(evId);
+                                    _approvedIds.add(evId);
+                                  });
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Event updates rejected!"),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              }
+                              _fetchDashboardData(silent: true);
+                            } catch (e) {
+                              if (mounted) {
+                                setState(() {
+                                  _processingIds.remove(evId);
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text("Error: $e"),
+                                    backgroundColor: AppTheme.accent,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          child: const Text("Reject"),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+              })(),
             ],
           ),
         );

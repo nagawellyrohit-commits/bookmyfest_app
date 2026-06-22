@@ -12,6 +12,7 @@ enum Role {
   coordinator
   faculty_admin
   super_admin
+  guest
 }
 
 enum PaymentStatus {
@@ -46,6 +47,9 @@ model User {
   isFinalYear   Boolean        @default(false) @map("is_final_year")
   isVerified    Boolean        @default(false) @map("is_verified")
   studentId     String?        @map("student_id")
+  isParent      Boolean        @default(false) @map("is_parent")
+  parentStudentName    String?  @map("parent_student_name")
+  parentStudentCollege String? @map("parent_student_college")
   isPendingDeletion Boolean      @default(false) @map("is_pending_deletion")
   createdAt     DateTime       @default(now()) @map("created_at")
   jobProfile    JobProfile?
@@ -93,6 +97,7 @@ model Event {
   qrAttendanceCode     String         @unique @map("qr_attendance_code")
   certificateTemplate  Json?          @map("certificate_template")
   branch               String         @default("Open")
+  category             String         @default("Other")
   brochureUrl          String?        @map("brochure_url")
   brochurePages        Int            @default(0) @map("brochure_pages")
   posterUrl1           String?        @map("poster_url_1")

@@ -35,6 +35,8 @@ class _LoginScreenState extends State<LoginScreen> {
         return 'Faculty Sign In';
       case 'super_admin':
         return 'Super Admin Sign In';
+      case 'guest':
+        return 'Guest Sign In';
       default:
         return '${widget.selectedRole} Sign In';
     }
@@ -51,6 +53,8 @@ class _LoginScreenState extends State<LoginScreen> {
         return Icons.co_present_rounded;
       case 'super_admin':
         return Icons.manage_accounts_rounded;
+      case 'guest':
+        return Icons.visibility_outlined;
       default:
         return Icons.school_rounded;
     }
@@ -376,6 +380,16 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        "BUILT FOR STUDENTS. POWERED BY RNI TECH",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color.fromARGB(255, 14, 14, 14),
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       const SizedBox(height: 20),
                     ],

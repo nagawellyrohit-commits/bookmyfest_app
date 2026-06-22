@@ -56,6 +56,9 @@ class AuthService {
     String? linkedinUrl,
     String? branch,
     int? passingYear,
+    bool? isParent,
+    String? parentStudentName,
+    String? parentStudentCollege,
   }) async {
     try {
       final payload = {
@@ -79,6 +82,9 @@ class AuthService {
         "linkedinUrl": linkedinUrl?.trim(),
         "branch": branch?.trim(),
         "passingYear": passingYear,
+        "isParent": isParent ?? false,
+        "parentStudentName": parentStudentName?.trim(),
+        "parentStudentCollege": parentStudentCollege?.trim(),
       };
 
       final response = await http.post(

@@ -32,6 +32,8 @@ class _SelectLoginScreenState extends State<SelectLoginScreen>
         return 'faculty_admin';
       case 'Super Admin':
         return 'super_admin';
+      case 'Guest':
+        return 'guest';
       default:
         return 'student';
     }
@@ -45,9 +47,9 @@ class _SelectLoginScreenState extends State<SelectLoginScreen>
       duration: const Duration(milliseconds: 1000),
     );
 
-    // Create 4 staggered animations (one for each card)
-    _animations = List.generate(4, (index) {
-      final start = index * 0.12;
+    // Create 5 staggered animations (one for each card)
+    _animations = List.generate(5, (index) {
+      final start = index * 0.1;
       final end = (start + 0.6).clamp(0.0, 1.0);
       return CurvedAnimation(
         parent: _controller,
@@ -107,7 +109,7 @@ class _SelectLoginScreenState extends State<SelectLoginScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 40),
+                const SizedBox(height: 30),
                 // Heading: "Select Login"
                 const Text(
                   "Select Login",
@@ -118,49 +120,222 @@ class _SelectLoginScreenState extends State<SelectLoginScreen>
                     color: Color(0xFF0F172A), // Dark Slate
                   ),
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: 20),
 
-                // Grid of 4 login types
+                // Grid/Stack Layout centered
                 Expanded(
-                  child: GridView.count(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 10,
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxHeight: 380,
+                        maxWidth: 360,
+                      ),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          double W = 300;
+                          double H = 300;
+                          double centerSize = 108;
+                          double centerRadius = centerSize / 2;
+
+                          return Stack(
+                            alignment: Alignment.center,
+                            clipBehavior: Clip.none,
+                            children: [
+                              // Staggered entry animation for the main grid panel
+                              AnimatedBuilder(
+                                animation: _animations[0],
+                                builder: (context, child) {
+                                  final val = _animations[0].value;
+                                  final scale = 0.85 + (val * 0.15);
+                                  final slideY = (1.0 - val) * 60.0;
+                                  return Transform(
+                                    transform:
+                                        Matrix4.translationValues(
+                                          0.0,
+                                          slideY,
+                                          0.0,
+                                        ) *
+                                        Matrix4.diagonal3Values(
+                                          scale,
+                                          scale,
+                                          1.0,
+                                        ),
+                                    alignment: Alignment.center,
+                                    child: Opacity(
+                                      opacity: val.clamp(0.0, 1.0),
+                                      child: child,
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  width: W,
+                                  height: H,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(32),
+                                    border: Border.all(
+                                      color: appBarColor,
+                                      width: 2.0,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.04,
+                                        ),
+                                        blurRadius: 15,
+                                        offset: const Offset(0, 6),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Stack(
+                                    children: [
+                                      // 1. Grid Lines
+                                      Positioned.fill(
+                                        child: CustomPaint(
+                                          painter: GridLinesPainter(
+                                            color: appBarColor,
+                                            centerRadius: centerRadius,
+                                          ),
+                                        ),
+                                      ),
+
+                                      // 2. Quadrants
+                                      // Top-Left: Faculty
+                                      Positioned(
+                                        left: 0,
+                                        top: 0,
+                                        width: W / 2,
+                                        height: H / 2,
+                                        child: _buildQuadrant(
+                                          context,
+                                          title: "Faculty",
+                                          iconData:
+                                              Icons.person_outline_rounded,
+                                          iconColor: appBarColor,
+                                          alignment: const Alignment(
+                                            -0.2,
+                                            -0.2,
+                                          ),
+                                          borderRadius: const BorderRadius.only(
+                                            topLeft: Radius.circular(30),
+                                          ),
+                                          onTap: () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => LoginScreen(
+                                                selectedRole:
+                                                    _getRoleParamValue(
+                                                      "Faculty",
+                                                    ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      // Top-Right: Coordinator
+                                      Positioned(
+                                        left: W / 2,
+                                        top: 0,
+                                        width: W / 2,
+                                        height: H / 2,
+                                        child: _buildQuadrant(
+                                          context,
+                                          title: "Coordinator",
+                                          iconData: Icons.groups_outlined,
+                                          iconColor: appBarColor,
+                                          alignment: const Alignment(0.2, -0.2),
+                                          borderRadius: const BorderRadius.only(
+                                            topRight: Radius.circular(30),
+                                          ),
+                                          onTap: () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => LoginScreen(
+                                                selectedRole:
+                                                    _getRoleParamValue(
+                                                      "Coordinator",
+                                                    ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      // Bottom-Left: Guest
+                                      Positioned(
+                                        left: 0,
+                                        top: H / 2,
+                                        width: W / 2,
+                                        height: H / 2,
+                                        child: _buildQuadrant(
+                                          context,
+                                          title: "Guest",
+                                          iconData: Icons.visibility_outlined,
+                                          iconColor: appBarColor,
+                                          alignment: const Alignment(-0.2, 0.2),
+                                          borderRadius: const BorderRadius.only(
+                                            bottomLeft: Radius.circular(30),
+                                          ),
+                                          onTap: () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => LoginScreen(
+                                                selectedRole:
+                                                    _getRoleParamValue("Guest"),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      // Bottom-Right: Super Admin
+                                      Positioned(
+                                        left: W / 2,
+                                        top: H / 2,
+                                        width: W / 2,
+                                        height: H / 2,
+                                        child: _buildQuadrant(
+                                          context,
+                                          title: "Super Admin",
+                                          iconData:
+                                              Icons.manage_accounts_outlined,
+                                          iconColor: appBarColor,
+                                          alignment: const Alignment(0.2, 0.2),
+                                          borderRadius: const BorderRadius.only(
+                                            bottomRight: Radius.circular(30),
+                                          ),
+                                          onTap: () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => LoginScreen(
+                                                selectedRole:
+                                                    _getRoleParamValue(
+                                                      "Super Admin",
+                                                    ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                              // 3. Center Circular Card: Student
+                              _buildCenterCard(
+                                context,
+                                title: "Student",
+                                iconData: Icons.badge_outlined,
+                                iconColor: appBarColor,
+                                size: centerSize,
+                              ),
+                            ],
+                          );
+                        },
+                      ),
                     ),
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 20,
-                    crossAxisSpacing: 20,
-                    childAspectRatio: 0.95,
-                    children: [
-                      _buildLoginCard(
-                        context,
-                        index: 0,
-                        title: "Student",
-                        iconData: Icons.badge_rounded,
-                        iconColor: appBarColor,
-                      ),
-                      _buildLoginCard(
-                        context,
-                        index: 1,
-                        title: "Coordinator",
-                        iconData: Icons.groups_rounded,
-                        iconColor: appBarColor,
-                      ),
-                      _buildLoginCard(
-                        context,
-                        index: 2,
-                        title: "Faculty",
-                        iconData: Icons.co_present_rounded,
-                        iconColor: appBarColor,
-                      ),
-                      _buildLoginCard(
-                        context,
-                        index: 3,
-                        title: "Super Admin",
-                        iconData: Icons.manage_accounts_rounded,
-                        iconColor: appBarColor,
-                      ),
-                    ],
                   ),
                 ),
 
@@ -168,7 +343,7 @@ class _SelectLoginScreenState extends State<SelectLoginScreen>
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Text(
-                    "BUILT FOR STUDENTS. POWERED BY RNI TECH",
+                    "BUILT FOR STUDENTS. POWERED BY RONAGATECH",
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 12,
@@ -186,46 +361,112 @@ class _SelectLoginScreenState extends State<SelectLoginScreen>
     );
   }
 
-  Widget _buildLoginCard(
+  Widget _buildQuadrant(
     BuildContext context, {
-    required int index,
     required String title,
     required IconData iconData,
     required Color iconColor,
+    required Alignment alignment,
+    required BorderRadius borderRadius,
+    required VoidCallback onTap,
   }) {
-    final animation = _animations[index];
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: borderRadius,
+        child: Align(
+          alignment: alignment,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildSketchIcon(title, iconData, iconColor),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSketchIcon(String title, IconData iconData, Color iconColor) {
+    if (title == "Super Admin") {
+      // Outlined person/gear shape (no extra boundary shape)
+      return Icon(iconData, size: 42, color: iconColor);
+    } else if (title == "Coordinator") {
+      // Outlined groups shape (three people)
+      return Icon(iconData, size: 44, color: iconColor);
+    } else if (title == "Faculty") {
+      // Faculty is outline person inside dome/arch
+      return Container(
+        padding: const EdgeInsets.only(top: 6, left: 10, right: 10, bottom: 2),
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(color: iconColor, width: 1.8),
+            left: BorderSide(color: iconColor, width: 1.8),
+            right: BorderSide(color: iconColor, width: 1.8),
+          ),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+          ),
+        ),
+        child: Icon(iconData, size: 32, color: iconColor),
+      );
+    } else if (title == "Guest") {
+      // Guest is outline eye inside circular border
+      return Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: iconColor, width: 1.8),
+        ),
+        child: Icon(iconData, size: 28, color: iconColor),
+      );
+    } else {
+      return Icon(iconData, size: 36, color: iconColor);
+    }
+  }
+
+  Widget _buildCenterCard(
+    BuildContext context, {
+    required String title,
+    required IconData iconData,
+    required Color iconColor,
+    required double size,
+  }) {
+    final animation = _animations[4];
     return AnimatedBuilder(
       animation: animation,
       builder: (context, child) {
         final val = animation.value;
-        final scale = 0.85 + (val * 0.15);
-        final slideY = (1.0 - val) * 60.0;
-        final rotateX = (1.0 - val) * 0.22;
-        final rotateY = (1.0 - val) * (index % 2 == 0 ? -0.15 : 0.15);
-
-        final transformMatrix = Matrix4.identity()
-          ..setEntry(3, 2, 0.001) // 3D Perspective
-          ..rotateX(rotateX)
-          ..rotateY(rotateY);
-
-        return Transform(
-          transform:
-              transformMatrix *
-              Matrix4.translationValues(0.0, slideY, 0.0) *
-              Matrix4.diagonal3Values(scale, scale, 1.0),
-          alignment: Alignment.center,
+        final scale = 0.8 + (val * 0.2);
+        return Transform.scale(
+          scale: scale,
           child: Opacity(opacity: val.clamp(0.0, 1.0), child: child),
         );
       },
       child: Container(
+        width: size,
+        height: size,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+          shape: BoxShape.circle,
+          border: Border.all(color: iconColor, width: 2.2),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 10,
+              color: iconColor.withValues(alpha: 0.15),
+              blurRadius: 12,
               offset: const Offset(0, 4),
             ),
           ],
@@ -233,8 +474,8 @@ class _SelectLoginScreenState extends State<SelectLoginScreen>
         child: Material(
           color: Colors.transparent,
           child: InkWell(
+            customBorder: const CircleBorder(),
             onTap: () {
-              // Navigate directly to LoginScreen, passing the selected role
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -243,33 +484,16 @@ class _SelectLoginScreenState extends State<SelectLoginScreen>
                 ),
               );
             },
-            borderRadius: BorderRadius.circular(16),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Large circular icon matching the screenshot style
-                Container(
-                  width: 90,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    color: iconColor,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: iconColor.withValues(alpha: 0.25),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Icon(iconData, size: 44, color: Colors.white),
-                ),
-                const SizedBox(height: 16),
-                // Card label
+                Icon(iconData, size: 34, color: iconColor),
+                const SizedBox(height: 4),
                 Text(
                   title,
+                  textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 17,
+                    fontSize: 10.5,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF1E293B),
                   ),
@@ -283,194 +507,43 @@ class _SelectLoginScreenState extends State<SelectLoginScreen>
   }
 }
 
-// Background CustomPainter to draw faint educational watermarks (graduation caps, books, etc.)
-class WatermarkDoodlePainter extends CustomPainter {
+class GridLinesPainter extends CustomPainter {
+  final Color color;
+  final double centerRadius;
+  GridLinesPainter({required this.color, required this.centerRadius});
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFFE2E8F0).withValues(alpha: 0.25)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
+      ..color = color
+      ..strokeWidth = 1.8
+      ..style = PaintingStyle.stroke;
 
-    final double width = size.width;
-    final double height = size.height;
+    final double cx = size.width / 2;
+    final double cy = size.height / 2;
 
-    // Draw some simple vector representations of academic icons as watermarks
-
-    // 1. Graduation Cap (Top Left)
-    _drawCap(canvas, Offset(width * 0.15, height * 0.15), 25, paint);
-
-    // 2. Book (Middle Right)
-    _drawBook(canvas, Offset(width * 0.82, height * 0.35), 20, paint);
-
-    // 3. Atom/Science (Bottom Left)
-    _drawAtom(canvas, Offset(width * 0.18, height * 0.65), 22, paint);
-
-    // 4. Pencil (Bottom Right)
-    _drawPencil(canvas, Offset(width * 0.80, height * 0.75), 20, paint);
-
-    // 5. Light bulb (Center Center)
-    _drawBulb(canvas, Offset(width * 0.5, height * 0.48), 24, paint);
-  }
-
-  void _drawCap(Canvas canvas, Offset center, double size, Paint paint) {
-    final path = Path();
-    // Rhombus top
-    path.moveTo(center.dx, center.dy - size * 0.4);
-    path.lineTo(center.dx + size * 0.8, center.dy);
-    path.lineTo(center.dx, center.dy + size * 0.4);
-    path.lineTo(center.dx - size * 0.8, center.dy);
-    path.close();
-
-    // Cap neck/base
-    path.moveTo(center.dx - size * 0.4, center.dy + size * 0.2);
-    path.quadraticBezierTo(
-      center.dx,
-      center.dy + size * 0.6,
-      center.dx + size * 0.4,
-      center.dy + size * 0.2,
-    );
-    path.lineTo(center.dx + size * 0.4, center.dy + size * 0.45);
-    path.quadraticBezierTo(
-      center.dx,
-      center.dy + size * 0.8,
-      center.dx - size * 0.4,
-      center.dy + size * 0.45,
-    );
-    path.close();
-
-    canvas.drawPath(path, paint);
-  }
-
-  void _drawBook(Canvas canvas, Offset center, double size, Paint paint) {
-    final path = Path();
-    // Left page
-    path.moveTo(center.dx, center.dy + size * 0.4);
-    path.quadraticBezierTo(
-      center.dx - size * 0.4,
-      center.dy + size * 0.2,
-      center.dx - size * 0.8,
-      center.dy + size * 0.35,
-    );
-    path.lineTo(center.dx - size * 0.8, center.dy - size * 0.45);
-    path.quadraticBezierTo(
-      center.dx - size * 0.4,
-      center.dy - size * 0.6,
-      center.dx,
-      center.dy - size * 0.4,
-    );
-
-    // Right page
-    path.quadraticBezierTo(
-      center.dx + size * 0.4,
-      center.dy - size * 0.6,
-      center.dx + size * 0.8,
-      center.dy - size * 0.45,
-    );
-    path.lineTo(center.dx + size * 0.8, center.dy + size * 0.35);
-    path.quadraticBezierTo(
-      center.dx + size * 0.4,
-      center.dy + size * 0.2,
-      center.dx,
-      center.dy + size * 0.4,
-    );
-
-    // Center fold
-    path.moveTo(center.dx, center.dy - size * 0.4);
-    path.lineTo(center.dx, center.dy + size * 0.4);
-
-    canvas.drawPath(path, paint);
-  }
-
-  void _drawAtom(Canvas canvas, Offset center, double size, Paint paint) {
-    // Central nucleus
-    final nucleusPaint = Paint()
-      ..color = paint.color
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, 4, nucleusPaint);
-
-    // Orbit 1
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.rotate(0.6);
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: Offset.zero,
-        width: size * 1.8,
-        height: size * 0.6,
-      ),
-      paint,
-    );
-    canvas.restore();
-
-    // Orbit 2
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.rotate(-0.6);
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: Offset.zero,
-        width: size * 1.8,
-        height: size * 0.6,
-      ),
-      paint,
-    );
-    canvas.restore();
-  }
-
-  void _drawPencil(Canvas canvas, Offset center, double size, Paint paint) {
-    final path = Path();
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.rotate(-0.78); // 45 degrees
-
-    // Body
-    path.addRect(
-      Rect.fromLTRB(-size * 0.15, -size * 0.6, size * 0.15, size * 0.4),
-    );
-    // Tip
-    path.moveTo(-size * 0.15, -size * 0.6);
-    path.lineTo(0, -size * 0.95);
-    path.lineTo(size * 0.15, -size * 0.6);
-    // Eraser
-    path.moveTo(-size * 0.15, size * 0.4);
-    path.lineTo(-size * 0.15, size * 0.6);
-    path.quadraticBezierTo(0, size * 0.75, size * 0.15, size * 0.6);
-    path.lineTo(size * 0.15, size * 0.4);
-
-    canvas.drawPath(path, paint);
-    canvas.restore();
-  }
-
-  void _drawBulb(Canvas canvas, Offset center, double size, Paint paint) {
-    final path = Path();
-    // Bulb head curve
-    path.arcTo(
-      Rect.fromCircle(center: center, radius: size * 0.6),
-      0.8, // startAngle
-      4.68, // sweepAngle
-      true,
-    );
-    // Connect to screw base
-    path.lineTo(center.dx + size * 0.25, center.dy + size * 0.7);
-    path.lineTo(center.dx - size * 0.25, center.dy + size * 0.7);
-    path.close();
-
-    canvas.drawPath(path, paint);
-
-    // Threads at bottom
+    // Vertical line: top half
+    canvas.drawLine(Offset(cx, 0), Offset(cx, cy - centerRadius), paint);
+    // Vertical line: bottom half
     canvas.drawLine(
-      Offset(center.dx - size * 0.2, center.dy + size * 0.78),
-      Offset(center.dx + size * 0.2, center.dy + size * 0.78),
+      Offset(cx, cy + centerRadius),
+      Offset(cx, size.height),
       paint,
     );
+
+    // Horizontal line: left half
+    canvas.drawLine(Offset(0, cy), Offset(cx - centerRadius, cy), paint);
+    // Horizontal line: right half
     canvas.drawLine(
-      Offset(center.dx - size * 0.15, center.dy + size * 0.86),
-      Offset(center.dx + size * 0.15, center.dy + size * 0.86),
+      Offset(cx + centerRadius, cy),
+      Offset(size.width, cy),
       paint,
     );
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant GridLinesPainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.centerRadius != centerRadius;
+  }
 }

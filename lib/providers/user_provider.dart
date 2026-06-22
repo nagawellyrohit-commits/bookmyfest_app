@@ -15,6 +15,9 @@ class UserProvider extends ChangeNotifier {
   String? _department;
   bool _isFinalYear = false;
   bool _isPendingDeletion = false;
+  bool _isParent = false;
+  String? _parentStudentName;
+  String? _parentStudentCollege;
 
   // Getters
   String? get token => _token;
@@ -29,6 +32,9 @@ class UserProvider extends ChangeNotifier {
   String? get department => _department;
   bool get isFinalYear => _isFinalYear;
   bool get isPendingDeletion => _isPendingDeletion;
+  bool get isParent => _isParent;
+  String? get parentStudentName => _parentStudentName;
+  String? get parentStudentCollege => _parentStudentCollege;
 
   bool get isLoggedIn => _token != null;
 
@@ -52,6 +58,9 @@ class UserProvider extends ChangeNotifier {
     _isFinalYear = userMap['isFinalYear'] ?? userMap['is_final_year'] ?? false;
     _isPendingDeletion =
         userMap['isPendingDeletion'] ?? userMap['is_pending_deletion'] ?? false;
+    _isParent = userMap['isParent'] ?? userMap['is_parent'] ?? false;
+    _parentStudentName = userMap['parentStudentName'] ?? userMap['parent_student_name'];
+    _parentStudentCollege = userMap['parentStudentCollege'] ?? userMap['parent_student_college'];
 
     // Persist session details asynchronously
     _saveSessionToPrefs(token, userMap);
@@ -73,6 +82,9 @@ class UserProvider extends ChangeNotifier {
     _department = null;
     _isFinalYear = false;
     _isPendingDeletion = false;
+    _isParent = false;
+    _parentStudentName = null;
+    _parentStudentCollege = null;
 
     // Clear session details from persistent storage
     _clearSessionInPrefs();
@@ -125,6 +137,9 @@ class UserProvider extends ChangeNotifier {
         _isFinalYear = userMap['isFinalYear'] ?? userMap['is_final_year'] ?? false;
         _isPendingDeletion =
             userMap['isPendingDeletion'] ?? userMap['is_pending_deletion'] ?? false;
+        _isParent = userMap['isParent'] ?? userMap['is_parent'] ?? false;
+        _parentStudentName = userMap['parentStudentName'] ?? userMap['parent_student_name'];
+        _parentStudentCollege = userMap['parentStudentCollege'] ?? userMap['parent_student_college'];
 
         notifyListeners();
         return true;

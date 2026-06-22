@@ -482,7 +482,7 @@ class _SponsorshipMarqueeState extends State<_SponsorshipMarquee> {
         textDirection: TextDirection.ltr,
         maxLines: 1,
       )..layout();
-      width += textPainter.width.clamp(20.0, 180.0);
+      width += textPainter.width + 4.0;
     }
     if (hasNameImage) width += 80;
 
@@ -570,7 +570,7 @@ class _SponsorshipMarqueeState extends State<_SponsorshipMarquee> {
                   if (hasLogo && (hasNameText || hasNameImage))
                     const SizedBox(width: 6),
                   if (hasNameText)
-                    Expanded(
+                    Flexible(
                       child: Text(
                         nameText,
                         maxLines: 1,
