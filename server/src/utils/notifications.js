@@ -34,7 +34,7 @@ export const sendEmailNotification = async (to, subject, text, html = '') => {
   try {
     const transporter = createMailTransporter();
     const info = await transporter.sendMail({
-      from: process.env.SMTP_FROM || 'no-reply@collegeconnect.com',
+      from: process.env.SMTP_FROM || 'no-reply@bookmyfest.co',
       to,
       subject,
       text,

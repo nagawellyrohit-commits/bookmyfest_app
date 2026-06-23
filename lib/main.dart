@@ -31,7 +31,7 @@ class MyApp extends StatelessWidget {
     final userProvider = Provider.of<UserProvider>(context);
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'CollegeConnect',
+      title: 'BookMyFest',
       theme: AppTheme.themeData,
       home: userProvider.isLoggedIn ? const DashboardScreen() : const WelcomeScreen(),
     );

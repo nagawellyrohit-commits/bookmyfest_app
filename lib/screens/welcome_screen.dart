@@ -15,7 +15,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   final String _instituteName = "bookmyfest";
   final String _title = "Your Campus Events \nAll in One Place.";
   final String _subtitle = "Discover • Book • Celebrate";
-  final Color _brandColor = const Color(0xffED1383);
+  final Color _brandColor = const Color(0xff9708AA);
 
   late final AnimationController _controller;
   late final AnimationController _shakeController;
@@ -465,7 +465,8 @@ class _SponsorshipMarqueeState extends State<_SponsorshipMarquee> {
 
     final bool hasLogo = logoUrl.isNotEmpty;
     final bool hasNameText = nameText.isNotEmpty;
-    final bool hasNameImage = nameImageUrl.isNotEmpty && nameImageUrl.startsWith('http');
+    final bool hasNameImage =
+        nameImageUrl.isNotEmpty && nameImageUrl.startsWith('http');
 
     double width = 0;
     if (hasLogo) width += 52;
@@ -474,10 +475,7 @@ class _SponsorshipMarqueeState extends State<_SponsorshipMarquee> {
       final textPainter = TextPainter(
         text: TextSpan(
           text: nameText,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
         ),
         textDirection: TextDirection.ltr,
         maxLines: 1,
@@ -494,7 +492,10 @@ class _SponsorshipMarqueeState extends State<_SponsorshipMarquee> {
       if (!mounted) return;
       if (_scrollController.hasClients) {
         final currentPosition = _scrollController.position.pixels;
-        final double singleCycleWidth = widget.sponsors.fold(0.0, (sum, sp) => sum + _getSponsorWidth(sp));
+        final double singleCycleWidth = widget.sponsors.fold(
+          0.0,
+          (sum, sp) => sum + _getSponsorWidth(sp),
+        );
 
         double nextPosition = currentPosition + 0.8;
         if (nextPosition >= singleCycleWidth) {
@@ -509,10 +510,15 @@ class _SponsorshipMarqueeState extends State<_SponsorshipMarquee> {
 
   @override
   Widget build(BuildContext context) {
-    final double singleCycleWidth = widget.sponsors.fold(0.0, (sum, sp) => sum + _getSponsorWidth(sp));
+    final double singleCycleWidth = widget.sponsors.fold(
+      0.0,
+      (sum, sp) => sum + _getSponsorWidth(sp),
+    );
     final screenWidth = MediaQuery.of(context).size.width;
     final targetWidth = screenWidth + singleCycleWidth;
-    final repeatCount = (targetWidth / (singleCycleWidth > 0 ? singleCycleWidth : 1)).ceil() + 1;
+    final repeatCount =
+        (targetWidth / (singleCycleWidth > 0 ? singleCycleWidth : 1)).ceil() +
+        1;
 
     final displayList = <dynamic>[];
     for (int i = 0; i < repeatCount; i++) {

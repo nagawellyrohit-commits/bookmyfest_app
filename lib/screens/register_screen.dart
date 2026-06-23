@@ -47,7 +47,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   late String _selectedRole;
 
-  final Color _brandColor = const Color(0xffED1383);
+  final Color _brandColor = const Color(0xff9708AA);
 
   @override
   void initState() {
@@ -80,12 +80,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return 'Faculty ID';
   }
 
-
-
   Future<void> _pickIdProofImage() async {
     try {
       final ImagePicker picker = ImagePicker();
-      
+
       final String? source = await showModalBottomSheet<String>(
         context: context,
         backgroundColor: Colors.white,
@@ -144,7 +142,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       // Check image type (jpeg, png, jpg, webp, pic, img, jfif, heic, heif)
       final lowerName = fileName.toLowerCase();
-      final allowedExtensions = ['.jpeg', '.jpg', '.png', '.webp', '.pic', '.img', '.jfif', '.heic', '.heif'];
+      final allowedExtensions = [
+        '.jpeg',
+        '.jpg',
+        '.png',
+        '.webp',
+        '.pic',
+        '.img',
+        '.jfif',
+        '.heic',
+        '.heif',
+      ];
       bool isValidExt = false;
       for (var ext in allowedExtensions) {
         if (lowerName.endsWith(ext)) {
@@ -154,12 +162,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
 
       if (!isValidExt) {
-        throw Exception("Only image formats (JPEG, JPG, PNG, WEBP, PIC, IMG, etc.) are allowed!");
+        throw Exception(
+          "Only image formats (JPEG, JPG, PNG, WEBP, PIC, IMG, etc.) are allowed!",
+        );
       }
 
       const maxLimit = 20 * 1024 * 1024;
       if (fileBytes.length > maxLimit) {
-        throw Exception("Image size exceeds 20MB limit. Please capture/choose a smaller image.");
+        throw Exception(
+          "Image size exceeds 20MB limit. Please capture/choose a smaller image.",
+        );
       }
 
       setState(() {
@@ -214,7 +226,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if ((isStudent || isCoordinator) && _idProofController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("${_getIdProofLabel()} Proof is mandatory to register!"),
+          content: Text(
+            "${_getIdProofLabel()} Proof is mandatory to register!",
+          ),
           backgroundColor: _brandColor,
         ),
       );
@@ -234,9 +248,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: _passwordController.text,
         phone: _phoneController.text,
         role: _selectedRole,
-        collegeName: (!isSuperAdmin && !isGuest) ? _collegeNameController.text : "N/A",
-        department: (!isSuperAdmin && !isGuest) ? _departmentController.text : "N/A",
-        idProofUrl: (!isSuperAdmin && !isGuest) && _idProofController.text.isNotEmpty
+        collegeName: (!isSuperAdmin && !isGuest)
+            ? _collegeNameController.text
+            : "N/A",
+        department: (!isSuperAdmin && !isGuest)
+            ? _departmentController.text
+            : "N/A",
+        idProofUrl:
+            (!isSuperAdmin && !isGuest) && _idProofController.text.isNotEmpty
             ? _idProofController.text
             : "https://via.placeholder.com/150",
         isFinalYear: false,
@@ -269,8 +288,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ? int.tryParse(_passingYearController.text)
             : null,
         isParent: isGuest && _isParentOfStudent,
-        parentStudentName: isGuest && _isParentOfStudent ? _parentStudentNameController.text : null,
-        parentStudentCollege: isGuest && _isParentOfStudent ? _parentStudentCollegeController.text : null,
+        parentStudentName: isGuest && _isParentOfStudent
+            ? _parentStudentNameController.text
+            : null,
+        parentStudentCollege: isGuest && _isParentOfStudent
+            ? _parentStudentCollegeController.text
+            : null,
       );
 
       if (mounted) {
@@ -382,7 +405,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // Strict 20MB size limit validation on client
       const maxLimit = 20 * 1024 * 1024;
       if (fileBytes.length > maxLimit) {
-        throw Exception("File size exceeds 20MB limit. Please choose a smaller PDF.");
+        throw Exception(
+          "File size exceeds 20MB limit. Please choose a smaller PDF.",
+        );
       }
 
       // Strict PDF extension validation on client
@@ -670,7 +695,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               Align(
                                 alignment: Alignment.centerLeft,
                                 child: Padding(
-                                  padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
+                                  padding: const EdgeInsets.only(
+                                    bottom: 8.0,
+                                    left: 4.0,
+                                  ),
                                   child: Text(
                                     "${_getIdProofLabel()} Proof${(_selectedRole == 'student' || _selectedRole == 'coordinator') ? ' (Required)' : ''}",
                                     style: const TextStyle(
@@ -684,17 +712,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               _isUploadingIdProof
                                   ? const Center(
                                       child: Padding(
-                                        padding: EdgeInsets.symmetric(vertical: 16.0),
+                                        padding: EdgeInsets.symmetric(
+                                          vertical: 16.0,
+                                        ),
                                         child: CircularProgressIndicator(),
                                       ),
                                     )
                                   : Container(
                                       decoration: BoxDecoration(
                                         border: Border.all(
-                                          color: _idProofController.text.isNotEmpty
+                                          color:
+                                              _idProofController.text.isNotEmpty
                                               ? Colors.green
                                               : const Color(0xFFCBD5E1),
-                                          width: _idProofController.text.isNotEmpty ? 1.5 : 1,
+                                          width:
+                                              _idProofController.text.isNotEmpty
+                                              ? 1.5
+                                              : 1,
                                         ),
                                         borderRadius: BorderRadius.circular(16),
                                         color: Colors.white,
@@ -713,69 +747,104 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                                 children: [
                                                   Icon(
                                                     Icons.camera_alt_outlined,
-                                                    color: _idProofController.text.isNotEmpty
+                                                    color:
+                                                        _idProofController
+                                                            .text
+                                                            .isNotEmpty
                                                         ? Colors.green
-                                                        : const Color(0xFF64748B),
+                                                        : const Color(
+                                                            0xFF64748B,
+                                                          ),
                                                   ),
                                                   const SizedBox(width: 12),
                                                   Expanded(
                                                     child: Column(
                                                       crossAxisAlignment:
-                                                          CrossAxisAlignment.start,
+                                                          CrossAxisAlignment
+                                                              .start,
                                                       children: [
                                                         Text(
-                                                          _uploadedIdProofName != null
+                                                          _uploadedIdProofName !=
+                                                                  null
                                                               ? "Selected: $_uploadedIdProofName"
-                                                              : (_idProofController.text.isNotEmpty
-                                                                  ? "${_getIdProofLabel()} Uploaded"
-                                                                  : "Click Photo or Upload ${_getIdProofLabel()}"),
+                                                              : (_idProofController
+                                                                        .text
+                                                                        .isNotEmpty
+                                                                    ? "${_getIdProofLabel()} Uploaded"
+                                                                    : "Click Photo or Upload ${_getIdProofLabel()}"),
                                                           style: TextStyle(
-                                                            color: _idProofController.text.isNotEmpty
+                                                            color:
+                                                                _idProofController
+                                                                    .text
+                                                                    .isNotEmpty
                                                                 ? Colors.green
-                                                                : const Color(0xFF1E293B),
-                                                            fontWeight: _idProofController.text.isNotEmpty
-                                                                ? FontWeight.bold
-                                                                : FontWeight.normal,
+                                                                : const Color(
+                                                                    0xFF1E293B,
+                                                                  ),
+                                                            fontWeight:
+                                                                _idProofController
+                                                                    .text
+                                                                    .isNotEmpty
+                                                                ? FontWeight
+                                                                      .bold
+                                                                : FontWeight
+                                                                      .normal,
                                                             fontSize: 14,
                                                           ),
                                                         ),
-                                                        const SizedBox(height: 2),
+                                                        const SizedBox(
+                                                          height: 2,
+                                                        ),
                                                         Text(
-                                                          _idProofController.text.isNotEmpty
+                                                          _idProofController
+                                                                  .text
+                                                                  .isNotEmpty
                                                               ? "Tap to retake/re-upload"
                                                               : "JPEG, JPG, PNG, PIC, IMG up to 20MB",
-                                                          style: const TextStyle(
-                                                            color: Color(0xFF64748B),
-                                                            fontSize: 11,
-                                                          ),
+                                                          style:
+                                                              const TextStyle(
+                                                                color: Color(
+                                                                  0xFF64748B,
+                                                                ),
+                                                                fontSize: 11,
+                                                              ),
                                                         ),
                                                       ],
                                                     ),
                                                   ),
-                                                  if (_idProofController.text.isNotEmpty)
+                                                  if (_idProofController
+                                                      .text
+                                                      .isNotEmpty)
                                                     const Icon(
                                                       Icons.check_circle,
                                                       color: Colors.green,
                                                     )
                                                   else
                                                     const Icon(
-                                                      Icons.upload_file_outlined,
+                                                      Icons
+                                                          .upload_file_outlined,
                                                       color: Color(0xFF64748B),
                                                     ),
                                                 ],
                                               ),
-                                              if (_idProofImageBytes != null) ...[
+                                              if (_idProofImageBytes !=
+                                                  null) ...[
                                                 const SizedBox(height: 12),
                                                 ClipRRect(
-                                                  borderRadius: BorderRadius.circular(12),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
                                                   child: Container(
                                                     height: 120,
                                                     width: double.infinity,
                                                     decoration: BoxDecoration(
                                                       border: Border.all(
-                                                        color: const Color(0xFFE2E8F0),
+                                                        color: const Color(
+                                                          0xFFE2E8F0,
+                                                        ),
                                                       ),
-                                                      color: const Color(0xFFF8FAFC),
+                                                      color: const Color(
+                                                        0xFFF8FAFC,
+                                                      ),
                                                     ),
                                                     child: Image.memory(
                                                       _idProofImageBytes!,
@@ -929,81 +998,129 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       _isUploadingResume
                                           ? const Center(
                                               child: Padding(
-                                                padding: EdgeInsets.symmetric(vertical: 8.0),
-                                                child: CircularProgressIndicator(),
+                                                padding: EdgeInsets.symmetric(
+                                                  vertical: 8.0,
+                                                ),
+                                                child:
+                                                    CircularProgressIndicator(),
                                               ),
                                             )
                                           : Container(
                                               decoration: BoxDecoration(
                                                 border: Border.all(
-                                                  color: _resumeController.text.isNotEmpty
+                                                  color:
+                                                      _resumeController
+                                                          .text
+                                                          .isNotEmpty
                                                       ? Colors.green
                                                       : const Color(0xFFCBD5E1),
-                                                  width: _resumeController.text.isNotEmpty ? 1.5 : 1,
+                                                  width:
+                                                      _resumeController
+                                                          .text
+                                                          .isNotEmpty
+                                                      ? 1.5
+                                                      : 1,
                                                 ),
-                                                borderRadius: BorderRadius.circular(16),
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
                                                 color: Colors.white,
                                               ),
                                               child: InkWell(
                                                 onTap: _pickAndUploadResume,
-                                                borderRadius: BorderRadius.circular(16),
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
                                                 child: Padding(
-                                                  padding: const EdgeInsets.symmetric(
-                                                    horizontal: 16,
-                                                    vertical: 16,
-                                                  ),
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 16,
+                                                        vertical: 16,
+                                                      ),
                                                   child: Row(
                                                     children: [
                                                       Icon(
-                                                        Icons.picture_as_pdf_outlined,
-                                                        color: _resumeController.text.isNotEmpty
+                                                        Icons
+                                                            .picture_as_pdf_outlined,
+                                                        color:
+                                                            _resumeController
+                                                                .text
+                                                                .isNotEmpty
                                                             ? Colors.green
-                                                            : const Color(0xFF64748B),
+                                                            : const Color(
+                                                                0xFF64748B,
+                                                              ),
                                                       ),
                                                       const SizedBox(width: 12),
                                                       Expanded(
                                                         child: Column(
                                                           crossAxisAlignment:
-                                                              CrossAxisAlignment.start,
+                                                              CrossAxisAlignment
+                                                                  .start,
                                                           children: [
                                                             Text(
-                                                              _uploadedResumeName != null
+                                                              _uploadedResumeName !=
+                                                                      null
                                                                   ? "Selected: $_uploadedResumeName"
-                                                                  : (_resumeController.text.isNotEmpty
-                                                                      ? "Resume Uploaded"
-                                                                      : "Upload CV PDF (Max 20MB, PDF Only)"),
+                                                                  : (_resumeController
+                                                                            .text
+                                                                            .isNotEmpty
+                                                                        ? "Resume Uploaded"
+                                                                        : "Upload CV PDF (Max 20MB, PDF Only)"),
                                                               style: TextStyle(
-                                                                color: _resumeController.text.isNotEmpty
-                                                                    ? Colors.green
-                                                                    : const Color(0xFF1E293B),
-                                                                fontWeight: _resumeController.text.isNotEmpty
-                                                                    ? FontWeight.bold
-                                                                    : FontWeight.normal,
+                                                                color:
+                                                                    _resumeController
+                                                                        .text
+                                                                        .isNotEmpty
+                                                                    ? Colors
+                                                                          .green
+                                                                    : const Color(
+                                                                        0xFF1E293B,
+                                                                      ),
+                                                                fontWeight:
+                                                                    _resumeController
+                                                                        .text
+                                                                        .isNotEmpty
+                                                                    ? FontWeight
+                                                                          .bold
+                                                                    : FontWeight
+                                                                          .normal,
                                                                 fontSize: 14,
                                                               ),
                                                             ),
-                                                            if (_resumeController.text.isNotEmpty)
-                                                              const SizedBox(height: 2),
-                                                            if (_resumeController.text.isNotEmpty)
+                                                            if (_resumeController
+                                                                .text
+                                                                .isNotEmpty)
+                                                              const SizedBox(
+                                                                height: 2,
+                                                              ),
+                                                            if (_resumeController
+                                                                .text
+                                                                .isNotEmpty)
                                                               const Text(
                                                                 "Tap to replace the file",
                                                                 style: TextStyle(
-                                                                  color: Color(0xFF64748B),
+                                                                  color: Color(
+                                                                    0xFF64748B,
+                                                                  ),
                                                                   fontSize: 11,
                                                                 ),
                                                               ),
                                                           ],
                                                         ),
                                                       ),
-                                                      if (_resumeController.text.isNotEmpty)
+                                                      if (_resumeController
+                                                          .text
+                                                          .isNotEmpty)
                                                         const Icon(
                                                           Icons.check_circle,
                                                           color: Colors.green,
                                                         )
                                                       else
                                                         const Icon(
-                                                          Icons.upload_file_outlined,
-                                                          color: Color(0xFF64748B),
+                                                          Icons
+                                                              .upload_file_outlined,
+                                                          color: Color(
+                                                            0xFF64748B,
+                                                          ),
                                                         ),
                                                     ],
                                                   ),
@@ -1022,7 +1139,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               Align(
                                 alignment: Alignment.centerLeft,
                                 child: Padding(
-                                  padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
+                                  padding: const EdgeInsets.only(
+                                    bottom: 8.0,
+                                    left: 4.0,
+                                  ),
                                   child: const Text(
                                     "Are you a parent of a student?",
                                     style: TextStyle(
@@ -1040,7 +1160,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       color: Colors.transparent,
                                       child: RadioListTile<bool>(
                                         contentPadding: EdgeInsets.zero,
-                                        title: const Text("Yes", style: TextStyle(fontSize: 14)),
+                                        title: const Text(
+                                          "Yes",
+                                          style: TextStyle(fontSize: 14),
+                                        ),
                                         value: true,
                                         groupValue: _isParentOfStudent,
                                         activeColor: _brandColor,
@@ -1057,7 +1180,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       color: Colors.transparent,
                                       child: RadioListTile<bool>(
                                         contentPadding: EdgeInsets.zero,
-                                        title: const Text("No", style: TextStyle(fontSize: 14)),
+                                        title: const Text(
+                                          "No",
+                                          style: TextStyle(fontSize: 14),
+                                        ),
                                         value: false,
                                         groupValue: _isParentOfStudent,
                                         activeColor: _brandColor,
@@ -1075,13 +1201,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               if (_isParentOfStudent) ...[
                                 TextFormField(
                                   controller: _parentStudentNameController,
-                                  style: const TextStyle(color: Color(0xFF1E293B)),
+                                  style: const TextStyle(
+                                    color: Color(0xFF1E293B),
+                                  ),
                                   decoration: _lightInputDecoration(
                                     labelText: "Student's Full Name",
                                     prefixIcon: Icons.person_outline,
                                   ),
                                   validator: (val) {
-                                    if (_isParentOfStudent && (val == null || val.trim().isEmpty)) {
+                                    if (_isParentOfStudent &&
+                                        (val == null || val.trim().isEmpty)) {
                                       return "Please enter student's name";
                                     }
                                     return null;
@@ -1090,13 +1219,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 const SizedBox(height: 20),
                                 TextFormField(
                                   controller: _parentStudentCollegeController,
-                                  style: const TextStyle(color: Color(0xFF1E293B)),
+                                  style: const TextStyle(
+                                    color: Color(0xFF1E293B),
+                                  ),
                                   decoration: _lightInputDecoration(
                                     labelText: "Student's College Name",
                                     prefixIcon: Icons.apartment_outlined,
                                   ),
                                   validator: (val) {
-                                    if (_isParentOfStudent && (val == null || val.trim().isEmpty)) {
+                                    if (_isParentOfStudent &&
+                                        (val == null || val.trim().isEmpty)) {
                                       return "Please enter student's college name";
                                     }
                                     return null;
@@ -1182,17 +1314,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 24),
-                      const Text(
-                        "BUILT FOR STUDENTS. POWERED BY RNI TECH",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color.fromARGB(255, 14, 14, 14),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 40),
                     ],
                   ),
                 ),

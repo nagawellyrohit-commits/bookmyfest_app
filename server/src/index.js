@@ -6,5 +6,5 @@ dotenv.config();
 const PORT = process.env.PORT || 5001;
 
 app.listen(PORT, () => {
-  console.log(`[CollegeConnect Server] Running at: http://localhost:${PORT}`);
+  console.log(`[BookMyFest Server] Running at: http://localhost:${PORT}`);
 });

@@ -301,6 +301,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return "${days}d ${hours}h ${minutes}m ${seconds}s left";
   }
 
+  String _formatEventDate(String dateStr) {
+    try {
+      final dt = DateTime.parse(dateStr).toLocal();
+      final months = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec"
+      ];
+      return "${months[dt.month - 1]} ${dt.day}";
+    } catch (_) {
+      return "TBD";
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = Provider.of<UserProvider>(context);
@@ -881,215 +904,265 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ev['registrationDeadline'],
                     ).isBefore(DateTime.now());
 
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 20),
-                      padding: const EdgeInsets.all(20),
-                      decoration: AppTheme.cardDecoration(),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Badge & Title row
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 4,
+                    final String imageUrl = (() {
+                      final url = ev['posterUrl1'];
+                      if (url != null && url.toString().isNotEmpty) {
+                        return url.toString();
+                      }
+                      for (int i = 2; i <= 4; i++) {
+                        final u = ev['posterUrl$i'];
+                        if (u != null && u.toString().isNotEmpty) {
+                          return u.toString();
+                        }
+                      }
+                      return 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800';
+                    })();
+
+                    final category = ev['category']?.toString() ?? 'General';
+                    final title = ev['title']?.toString() ?? 'Event';
+                    final college = ev['college']?['name']?.toString() ?? 'Campus';
+                    final eventDateStr = ev['eventDate'] != null ? _formatEventDate(ev['eventDate'].toString()) : 'TBD';
+                    final isPaid = ev['isPaid'] ?? false;
+                    final entryFeeDouble = double.tryParse(ev['entryFee']?.toString() ?? '') ?? 0.0;
+
+                    return GestureDetector(
+                      onTap: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => EventDetailScreen(
+                              eventId: ev['id'],
+                              isCreateMode: false,
+                            ),
+                          ),
+                        );
+                        if (result == true) {
+                          _fetchDashboardData();
+                        }
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 24),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 16,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Top Image Section with Category Badge and Favorite Button
+                            Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                                  child: AspectRatio(
+                                    aspectRatio: 16 / 9,
+                                    child: Image.network(
+                                      imageUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) => Image.network(
+                                        'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800',
+                                        fit: BoxFit.cover,
+                                      ),
                                     ),
+                                  ),
+                                ),
+                                // Category Badge (floating top-left)
+                                Positioned(
+                                  top: 16,
+                                  left: 16,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                                     decoration: BoxDecoration(
-                                      color: ev['isPaid']
-                                          ? AppTheme.accent.withValues(alpha: 0.15)
-                                          : AppTheme.primary.withValues(
-                                              alpha: 0.15,
-                                            ),
-                                      borderRadius: BorderRadius.circular(8),
+                                      color: Colors.white.withValues(alpha: 0.9),
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
-                                      ev['isPaid']
-                                          ? "PAID: ₹${ev['entryFee']}"
-                                          : "FREE",
-                                      style: TextStyle(
-                                        color: ev['isPaid']
-                                            ? AppTheme.accent
-                                            : AppTheme.primary,
+                                      category,
+                                      style: const TextStyle(
+                                        color: AppTheme.primary,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 12,
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 4,
-                                    ),
+                                ),
+                                // Favorite Button (floating top-right)
+                                Positioned(
+                                  top: 12,
+                                  right: 12,
+                                  child: Container(
                                     decoration: BoxDecoration(
-                                      color: Colors.green.withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(8),
+                                      color: Colors.white.withValues(alpha: 0.9),
+                                      shape: BoxShape.circle,
                                     ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(
-                                          Icons.people_alt_rounded,
-                                          color: Colors.green,
-                                          size: 14,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          "${ev['_count']?['registrations'] ?? 0}",
-                                          style: const TextStyle(
-                                            color: Colors.green,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ],
+                                    child: const IconButton(
+                                      icon: Icon(
+                                        Icons.favorite_border_rounded,
+                                        color: Color(0xFF64748B),
+                                        size: 20,
+                                      ),
+                                      onPressed: null,
                                     ),
                                   ),
-                                ],
-                              ),
-                              Expanded(
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    if (ev['branch'] != null) ...[
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.blue.withValues(
-                                            alpha: 0.15,
-                                          ),
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          ev['branch'],
-                                          style: const TextStyle(
-                                            color: Colors.blue,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                    ],
-                                    Flexible(
-                                      child: Text(
-                                        ev['college']?['name'] ?? 'bookmyfest',
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 1,
-                                        style: const TextStyle(
-                                          color: AppTheme.textSecondary,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Title
-                          Text(
-                            ev['title'],
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.textPrimary,
+                              ],
                             ),
-                          ),
-                          const SizedBox(height: 8),
-
-                          // Description
-                          Text(
-                            ev['description'] ?? 'No description provided.',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: AppTheme.textSecondary,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Divider
-                          Container(
-                            height: 1,
-                            color: Colors.white.withValues(alpha: 0.05),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Countdown and action
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
+                            // Details Section
+                            Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    "Registration Deadline:",
-                                    style: TextStyle(
-                                      color: AppTheme.textSecondary,
-                                      fontSize: 10,
+                                  // Title
+                                  Text(
+                                    title,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF0F172A),
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _getCountdownText(
-                                      ev['registrationDeadline'],
-                                    ),
-                                    style: TextStyle(
-                                      color: isClosed
-                                          ? AppTheme.accent
-                                          : AppTheme.primary,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
+                                  const SizedBox(height: 10),
+                                  // Location & Date Row
+                                  Row(
+                                    children: [
+                                      // Location
+                                      const Icon(
+                                        Icons.location_on_outlined,
+                                        color: Color(0xFF64748B),
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          college,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: Color(0xFF64748B),
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      // Date
+                                      const Icon(
+                                        Icons.calendar_month_outlined,
+                                        color: Color(0xFF64748B),
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        eventDateStr,
+                                        style: const TextStyle(
+                                          color: Color(0xFF64748B),
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  // Countdown / Registrations Status
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.people_outline_rounded,
+                                        color: Color(0xFF64748B),
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        "${ev['_count']?['registrations'] ?? 0} registered",
+                                        style: const TextStyle(
+                                          color: Color(0xFF64748B),
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      const Icon(
+                                        Icons.hourglass_empty_rounded,
+                                        color: Color(0xFF64748B),
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          _getCountdownText(ev['registrationDeadline']),
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            color: isClosed ? AppTheme.accent : AppTheme.primary,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  // Bottom Row with Price and Book Now button
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      // Price
+                                      Text(
+                                        isPaid ? "₹${entryFeeDouble.toStringAsFixed(0)}" : "Free",
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w900,
+                                          color: isPaid ? AppTheme.accent : const Color(0xFF10B981),
+                                        ),
+                                      ),
+                                      // Book Now / Register button
+                                      ElevatedButton(
+                                        onPressed: () async {
+                                          final result = await Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => EventDetailScreen(
+                                                eventId: ev['id'],
+                                                isCreateMode: false,
+                                              ),
+                                            ),
+                                          );
+                                          if (result == true) {
+                                            _fetchDashboardData();
+                                          }
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppTheme.primary,
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 20,
+                                            vertical: 12,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          elevation: 0,
+                                        ),
+                                        child: Text(
+                                          isStudentView
+                                              ? (role == 'guest' ? "View Details" : "Book Now")
+                                              : "Manage & Audit",
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
-                              ElevatedButton(
-                                onPressed: () async {
-                                  final result = await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => EventDetailScreen(
-                                        eventId: ev['id'],
-                                        isCreateMode: false,
-                                      ),
-                                    ),
-                                  );
-                                  if (result == true) {
-                                    _fetchDashboardData();
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 10,
-                                  ),
-                                  textStyle: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                child: Text(
-                                  isStudentView
-                                      ? (role == 'guest' ? "View Details" : "Details & Register")
-                                      : "Manage & Audit",
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },
@@ -1980,98 +2053,111 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 passingYear,
               ),
 
-              if (businessName != null && businessName.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                const Text(
-                  "Startup / Company Info",
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primary,
-                  ),
+              const SizedBox(height: 8),
+              const Text(
+                "Startup / Company Info",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primary,
                 ),
-                const SizedBox(height: 8),
-                _profileDetailItem(
-                  Icons.business_center_outlined,
-                  "Company Name",
-                  businessName,
-                ),
-                if (description != null && description.isNotEmpty)
-                  _profileDetailItem(
-                    Icons.description_outlined,
-                    "Description",
-                    description,
-                  ),
-                if (contactPhone != null && contactPhone.isNotEmpty)
-                  _profileDetailItem(
-                    Icons.phone_android_outlined,
-                    "Business Phone",
-                    contactPhone,
-                  ),
-              ],
+              ),
+              const SizedBox(height: 8),
+              _profileDetailItem(
+                Icons.business_center_outlined,
+                "Company Name",
+                (businessName != null && businessName.toString().trim().isNotEmpty)
+                    ? businessName.toString().trim()
+                    : 'N/A',
+              ),
+              _profileDetailItem(
+                Icons.description_outlined,
+                "Description",
+                (description != null && description.toString().trim().isNotEmpty)
+                    ? description.toString().trim()
+                    : 'N/A',
+              ),
+              _profileDetailItem(
+                Icons.phone_android_outlined,
+                "Business Phone",
+                (contactPhone != null && contactPhone.toString().trim().isNotEmpty)
+                    ? contactPhone.toString().trim()
+                    : 'N/A',
+              ),
 
-              if ((websiteUrl != null && websiteUrl.isNotEmpty) ||
-                  (instagramUrl != null && instagramUrl.isNotEmpty) ||
-                  (linkedinUrl != null && linkedinUrl.isNotEmpty)) ...[
-                const SizedBox(height: 8),
-                const Text(
-                  "Professional Links",
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primary,
-                  ),
+              const SizedBox(height: 8),
+              const Text(
+                "Professional Links",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primary,
                 ),
-                const SizedBox(height: 8),
-                if (websiteUrl != null && websiteUrl.isNotEmpty)
-                  _profileDetailItem(
-                    Icons.web_outlined,
-                    "Website",
-                    websiteUrl,
-                    color: Colors.blue,
-                    onTap: () async {
-                      final url = Uri.parse(websiteUrl);
-                      if (await canLaunchUrl(url)) {
-                        await launchUrl(
-                          url,
-                          mode: LaunchMode.externalApplication,
-                        );
+              ),
+              const SizedBox(height: 8),
+              _profileDetailItem(
+                Icons.web_outlined,
+                "Website",
+                (websiteUrl != null && websiteUrl.toString().trim().isNotEmpty)
+                    ? websiteUrl.toString().trim()
+                    : 'N/A',
+                color: (websiteUrl != null && websiteUrl.toString().trim().isNotEmpty)
+                    ? Colors.blue
+                    : AppTheme.textSecondary,
+                onTap: (websiteUrl != null && websiteUrl.toString().trim().isNotEmpty)
+                    ? () async {
+                        final url = Uri.parse(websiteUrl.toString().trim());
+                        if (await canLaunchUrl(url)) {
+                          await launchUrl(
+                            url,
+                            mode: LaunchMode.externalApplication,
+                          );
+                        }
                       }
-                    },
-                  ),
-                if (instagramUrl != null && instagramUrl.isNotEmpty)
-                  _profileDetailItem(
-                    Icons.camera_alt_outlined,
-                    "Instagram",
-                    instagramUrl,
-                    color: Colors.pinkAccent,
-                    onTap: () async {
-                      final url = Uri.parse(instagramUrl);
-                      if (await canLaunchUrl(url)) {
-                        await launchUrl(
-                          url,
-                          mode: LaunchMode.externalApplication,
-                        );
+                    : null,
+              ),
+              _profileDetailItem(
+                Icons.camera_alt_outlined,
+                "Instagram",
+                (instagramUrl != null && instagramUrl.toString().trim().isNotEmpty)
+                    ? instagramUrl.toString().trim()
+                    : 'N/A',
+                color: (instagramUrl != null && instagramUrl.toString().trim().isNotEmpty)
+                    ? Colors.pinkAccent
+                    : AppTheme.textSecondary,
+                onTap: (instagramUrl != null && instagramUrl.toString().trim().isNotEmpty)
+                    ? () async {
+                        final url = Uri.parse(instagramUrl.toString().trim());
+                        if (await canLaunchUrl(url)) {
+                          await launchUrl(
+                            url,
+                            mode: LaunchMode.externalApplication,
+                          );
+                        }
                       }
-                    },
-                  ),
-                if (linkedinUrl != null && linkedinUrl.isNotEmpty)
-                  _profileDetailItem(
-                    Icons.link_outlined,
-                    "LinkedIn",
-                    linkedinUrl,
-                    color: Colors.blueAccent,
-                    onTap: () async {
-                      final url = Uri.parse(linkedinUrl);
-                      if (await canLaunchUrl(url)) {
-                        await launchUrl(
-                          url,
-                          mode: LaunchMode.externalApplication,
-                        );
+                    : null,
+              ),
+              _profileDetailItem(
+                Icons.link_outlined,
+                "LinkedIn",
+                (linkedinUrl != null && linkedinUrl.toString().trim().isNotEmpty)
+                    ? linkedinUrl.toString().trim()
+                    : 'N/A',
+                color: (linkedinUrl != null && linkedinUrl.toString().trim().isNotEmpty)
+                    ? Colors.blueAccent
+                    : AppTheme.textSecondary,
+                onTap: (linkedinUrl != null && linkedinUrl.toString().trim().isNotEmpty)
+                    ? () async {
+                        final url = Uri.parse(linkedinUrl.toString().trim());
+                        if (await canLaunchUrl(url)) {
+                          await launchUrl(
+                            url,
+                            mode: LaunchMode.externalApplication,
+                          );
+                        }
                       }
-                    },
-                  ),
-              ],
+                    : null,
+              ),
 
               const SizedBox(height: 8),
               _profileDetailItem(
@@ -2173,30 +2259,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   fontSize: 13,
                 ),
               ),
-              if (updates != null) ...[
-                const SizedBox(height: 8),
-                const Text(
-                  "Proposed Changes:",
-                  style: TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                ...updates.entries.map<Widget>((entry) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 2),
-                    child: Text(
-                      "- ${entry.key}: ${entry.value}",
-                      style: const TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: 12,
-                      ),
-                    ),
-                  );
-                }),
-              ],
+              const SizedBox(height: 16),
+              _buildApprovalForm(ev, updates),
               const SizedBox(height: 16),
               (() {
                 final String evId = ev['id'];
@@ -2380,6 +2444,195 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildApprovalField({
+    required String label,
+    required IconData icon,
+    required String originalValue,
+    required String? proposedValue,
+  }) {
+    final hasEdits = proposedValue != null && proposedValue != originalValue;
+    final displayValue = hasEdits ? proposedValue : originalValue;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(
+            color: hasEdits ? AppTheme.accent : AppTheme.textSecondary,
+            fontWeight: hasEdits ? FontWeight.bold : FontWeight.normal,
+            fontSize: 13,
+          ),
+          prefixIcon: Icon(
+            icon,
+            color: hasEdits ? AppTheme.accent : AppTheme.primary,
+            size: 18,
+          ),
+          suffixIcon: hasEdits
+              ? Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accent.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    "(edited)",
+                    style: TextStyle(
+                      color: AppTheme.accent,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                )
+              : null,
+          filled: true,
+          fillColor: hasEdits 
+              ? AppTheme.accent.withValues(alpha: 0.02) 
+              : Colors.grey.withValues(alpha: 0.05),
+          contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: hasEdits ? AppTheme.accent : const Color(0xFFE2E8F0),
+              width: hasEdits ? 1.5 : 1.0,
+            ),
+          ),
+        ),
+        child: Text(
+          displayValue.isEmpty ? "N/A" : displayValue,
+          style: TextStyle(
+            color: AppTheme.textPrimary,
+            fontSize: 13,
+            fontWeight: hasEdits ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildApprovalForm(Map<String, dynamic> ev, Map<String, dynamic>? updates) {
+    final originalEventDate = ev['eventDate'] != null 
+        ? DateTime.parse(ev['eventDate'].toString()).toLocal().toString().substring(0, 16) 
+        : 'N/A';
+    final proposedEventDate = updates?['eventDate'] != null 
+        ? DateTime.parse(updates!['eventDate'].toString()).toLocal().toString().substring(0, 16) 
+        : null;
+
+    final originalDeadline = ev['registrationDeadline'] != null 
+        ? DateTime.parse(ev['registrationDeadline'].toString()).toLocal().toString().substring(0, 16) 
+        : 'N/A';
+    final proposedDeadline = updates?['registrationDeadline'] != null 
+        ? DateTime.parse(updates!['registrationDeadline'].toString()).toLocal().toString().substring(0, 16) 
+        : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildApprovalField(
+          label: "Event Title",
+          icon: Icons.title,
+          originalValue: ev['title']?.toString() ?? '',
+          proposedValue: updates?['title']?.toString(),
+        ),
+        _buildApprovalField(
+          label: "Description",
+          icon: Icons.description_outlined,
+          originalValue: ev['description']?.toString() ?? '',
+          proposedValue: updates?['description']?.toString(),
+        ),
+        _buildApprovalField(
+          label: "Branch Focus",
+          icon: Icons.school_outlined,
+          originalValue: ev['branch']?.toString() ?? 'Open',
+          proposedValue: updates?['branch']?.toString(),
+        ),
+        _buildApprovalField(
+          label: "Event Category",
+          icon: Icons.category_outlined,
+          originalValue: ev['category']?.toString() ?? 'Other',
+          proposedValue: updates?['category']?.toString(),
+        ),
+        _buildApprovalField(
+          label: "WhatsApp Group Link",
+          icon: Icons.chat_bubble_outline,
+          originalValue: ev['whatsAppGroupLink']?.toString() ?? '',
+          proposedValue: updates?['whatsAppGroupLink']?.toString(),
+        ),
+        _buildApprovalField(
+          label: "Brochure PDF URL",
+          icon: Icons.picture_as_pdf_outlined,
+          originalValue: ev['brochureUrl']?.toString() ?? '',
+          proposedValue: updates?['brochureUrl']?.toString(),
+        ),
+        _buildApprovalField(
+          label: "Brochure Page Count",
+          icon: Icons.pages_outlined,
+          originalValue: ev['brochurePages']?.toString() ?? '0',
+          proposedValue: updates?['brochurePages']?.toString(),
+        ),
+        _buildApprovalField(
+          label: "Event Type",
+          icon: Icons.group_work_outlined,
+          originalValue: ev['eventType']?.toString().toUpperCase() ?? 'INDIVIDUAL',
+          proposedValue: updates?['eventType']?.toString().toUpperCase(),
+        ),
+        if (ev['eventType'] == 'group' || ev['eventType'] == 'both' || updates?['eventType'] == 'group' || updates?['eventType'] == 'both') ...[
+          _buildApprovalField(
+            label: "Min Members",
+            icon: Icons.person_outline,
+            originalValue: ev['minMembers']?.toString() ?? '1',
+            proposedValue: updates?['minMembers']?.toString(),
+          ),
+          _buildApprovalField(
+            label: "Max Members",
+            icon: Icons.groups_outlined,
+            originalValue: ev['maxMembers']?.toString() ?? '1',
+            proposedValue: updates?['maxMembers']?.toString(),
+          ),
+        ],
+        _buildApprovalField(
+          label: "Event Date",
+          icon: Icons.calendar_today,
+          originalValue: originalEventDate,
+          proposedValue: proposedEventDate,
+        ),
+        _buildApprovalField(
+          label: "Registration Deadline",
+          icon: Icons.hourglass_empty,
+          originalValue: originalDeadline,
+          proposedValue: proposedDeadline,
+        ),
+        _buildApprovalField(
+          label: "Payment Status",
+          icon: Icons.currency_rupee,
+          originalValue: ev['isPaid'] == true ? 'Paid' : 'Free',
+          proposedValue: updates?['isPaid'] != null ? (updates!['isPaid'] == true ? 'Paid' : 'Free') : null,
+        ),
+        if (ev['isPaid'] == true || updates?['isPaid'] == true) ...[
+          _buildApprovalField(
+            label: "Entry Fee",
+            icon: Icons.attach_money,
+            originalValue: ev['entryFee']?.toString() ?? '0.00',
+            proposedValue: updates?['entryFee']?.toString(),
+          ),
+          _buildApprovalField(
+            label: "UPI ID",
+            icon: Icons.qr_code,
+            originalValue: ev['upiId']?.toString() ?? '',
+            proposedValue: updates?['upiId']?.toString(),
+          ),
+        ],
+        _buildApprovalField(
+          label: "Poster URL 1",
+          icon: Icons.image_outlined,
+          originalValue: ev['posterUrl1']?.toString() ?? '',
+          proposedValue: updates?['posterUrl1']?.toString(),
+        ),
+      ],
     );
   }
 

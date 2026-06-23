@@ -23,7 +23,7 @@ app.use('/uploads', express.static('uploads'));
 
 // Root health API
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'CollegeConnect API is running smoothly' });
+  res.status(200).json({ status: 'ok', message: 'BookMyFest API is running smoothly' });
 });
 
 // Route registries

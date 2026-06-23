@@ -2,6 +2,7 @@ import prisma from '../config/db.js';
 import { Prisma } from '@prisma/client';
 import crypto from 'crypto';
 import { logAudit } from '../utils/dbHelper.js';
+import { sendEmailNotification } from '../utils/notifications.js';
 
 // Create a new event
 export const createEvent = async (req, res, next) => {
@@ -242,6 +243,39 @@ export const updateEvent = async (req, res, next) => {
           pendingUpdates: updateData
         }
       });
+
+      // Send email notifications to faculty of the same college
+      try {
+        const coordinatorUser = await prisma.user.findUnique({
+          where: { id: actor.id },
+          select: { fullName: true }
+        });
+        const coordinatorName = coordinatorUser?.fullName || 'A coordinator';
+
+        const faculties = await prisma.user.findMany({
+          where: {
+            role: 'faculty_admin',
+            collegeId: actor.collegeId,
+            isVerified: true
+          },
+          select: {
+            email: true,
+            fullName: true
+          }
+        });
+        const eventTitle = updatedEvent.title || existingEvent.title;
+        for (const faculty of faculties) {
+          const subject = `Event Update Request: ${eventTitle}`;
+          const text = `Hello ${faculty.fullName},\n\nCoordinator ${coordinatorName} has edited the event "${eventTitle}".\n\nPlease log in to review and approve/reject these updates.`;
+          const html = `<p>Hello <strong>${faculty.fullName}</strong>,</p>
+                        <p>Coordinator <strong>${coordinatorName}</strong> has edited the event <strong>"${eventTitle}"</strong>.</p>
+                        <p>Please log in to review and approve/reject these updates.</p>`;
+          sendEmailNotification(faculty.email, subject, text, html).catch(err => console.error("Error sending email to faculty:", err));
+        }
+      } catch (err) {
+        console.error("Error sending event edit email notification to faculties:", err);
+      }
+
       return res.status(200).json({
         success: true,
         message: 'Event updates submitted and pending Faculty Admin approval',
@@ -434,6 +468,38 @@ export const approveEventUpdate = async (req, res, next) => {
 
     await logAudit(actor.id, 'APPROVE_EVENT_UPDATE', 'events', id, event, updatedEvent);
 
+    // Send email notifications to coordinators of the same college
+    try {
+      const actorUser = await prisma.user.findUnique({
+        where: { id: actor.id },
+        select: { fullName: true }
+      });
+      const actorName = actorUser?.fullName || 'Faculty/Admin';
+
+      const coordinators = await prisma.user.findMany({
+        where: {
+          role: 'coordinator',
+          collegeId: event.collegeId,
+          isVerified: true
+        },
+        select: {
+          email: true,
+          fullName: true
+        }
+      });
+      const eventTitle = updatedEvent.title || event.title;
+      for (const coord of coordinators) {
+        const subject = `Event Update Approved: ${eventTitle}`;
+        const text = `Hello ${coord.fullName},\n\nThe proposed updates for the event "${eventTitle}" have been approved by ${actorName}.\n\nYou can now view the updated event on BookMyFest.`;
+        const html = `<p>Hello <strong>${coord.fullName}</strong>,</p>
+                      <p>The proposed updates for the event <strong>"${eventTitle}"</strong> have been approved by <strong>${actorName}</strong>.</p>
+                      <p>You can now view the updated event on BookMyFest.</p>`;
+        sendEmailNotification(coord.email, subject, text, html).catch(err => console.error("Error sending email to coordinator:", err));
+      }
+    } catch (err) {
+      console.error("Error sending event update approval email notification to coordinators:", err);
+    }
+
     res.status(200).json({
       success: true,
       message: 'Event updates approved and applied successfully',
@@ -467,6 +533,37 @@ export const rejectEventUpdate = async (req, res, next) => {
       data: { pendingUpdates: null }
     });
 
+    // Send email notifications to coordinators of the same college
+    try {
+      const actorUser = await prisma.user.findUnique({
+        where: { id: actor.id },
+        select: { fullName: true }
+      });
+      const actorName = actorUser?.fullName || 'Faculty/Admin';
+
+      const coordinators = await prisma.user.findMany({
+        where: {
+          role: 'coordinator',
+          collegeId: event.collegeId,
+          isVerified: true
+        },
+        select: {
+          email: true,
+          fullName: true
+        }
+      });
+      const eventTitle = event.title;
+      for (const coord of coordinators) {
+        const subject = `Event Update Rejected: ${eventTitle}`;
+        const text = `Hello ${coord.fullName},\n\nThe proposed updates for the event "${eventTitle}" have been rejected/discarded by ${actorName}.`;
+        const html = `<p>Hello <strong>${coord.fullName}</strong>,</p>
+                      <p>The proposed updates for the event <strong>"${eventTitle}"</strong> have been rejected/discarded by <strong>${actorName}</strong>.</p>`;
+        sendEmailNotification(coord.email, subject, text, html).catch(err => console.error("Error sending email to coordinator:", err));
+      }
+    } catch (err) {
+      console.error("Error sending event update rejection email notification to coordinators:", err);
+    }
+
     res.status(200).json({
       success: true,
       message: 'Pending updates discarded',
@@ -499,6 +596,37 @@ export const approveEventDelete = async (req, res, next) => {
 
     await logAudit(actor.id, 'APPROVE_EVENT_DELETE', 'events', id, event, null);
 
+    // Send email notifications to coordinators of the same college
+    try {
+      const actorUser = await prisma.user.findUnique({
+        where: { id: actor.id },
+        select: { fullName: true }
+      });
+      const actorName = actorUser?.fullName || 'Faculty/Admin';
+
+      const coordinators = await prisma.user.findMany({
+        where: {
+          role: 'coordinator',
+          collegeId: event.collegeId,
+          isVerified: true
+        },
+        select: {
+          email: true,
+          fullName: true
+        }
+      });
+      const eventTitle = event.title;
+      for (const coord of coordinators) {
+        const subject = `Event Deleted: ${eventTitle}`;
+        const text = `Hello ${coord.fullName},\n\nThe event "${eventTitle}" has been deleted following approval of the deletion request by ${actorName}.`;
+        const html = `<p>Hello <strong>${coord.fullName}</strong>,</p>
+                      <p>The event <strong>"${eventTitle}"</strong> has been deleted following approval of the deletion request by <strong>${actorName}</strong>.</p>`;
+        sendEmailNotification(coord.email, subject, text, html).catch(err => console.error("Error sending email to coordinator:", err));
+      }
+    } catch (err) {
+      console.error("Error sending event delete approval email notification to coordinators:", err);
+    }
+
     res.status(200).json({
       success: true,
       message: 'Event deletion request approved, event deleted'
@@ -530,6 +658,37 @@ export const rejectEventDelete = async (req, res, next) => {
       where: { id },
       data: { isPendingDeletion: false }
     });
+
+    // Send email notifications to coordinators of the same college
+    try {
+      const actorUser = await prisma.user.findUnique({
+        where: { id: actor.id },
+        select: { fullName: true }
+      });
+      const actorName = actorUser?.fullName || 'Faculty/Admin';
+
+      const coordinators = await prisma.user.findMany({
+        where: {
+          role: 'coordinator',
+          collegeId: event.collegeId,
+          isVerified: true
+        },
+        select: {
+          email: true,
+          fullName: true
+        }
+      });
+      const eventTitle = event.title;
+      for (const coord of coordinators) {
+        const subject = `Event Deletion Rejected: ${eventTitle}`;
+        const text = `Hello ${coord.fullName},\n\nThe request to delete the event "${eventTitle}" has been rejected/cancelled by ${actorName}.`;
+        const html = `<p>Hello <strong>${coord.fullName}</strong>,</p>
+                      <p>The request to delete the event <strong>"${eventTitle}"</strong> has been rejected/cancelled by <strong>${actorName}</strong>.</p>`;
+        sendEmailNotification(coord.email, subject, text, html).catch(err => console.error("Error sending email to coordinator:", err));
+      }
+    } catch (err) {
+      console.error("Error sending event delete rejection email notification to coordinators:", err);
+    }
 
     res.status(200).json({
       success: true,

@@ -85,8 +85,8 @@ Each object must have these exact JSON keys (ensure all keys and string values a
       {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
-          'HTTP-Referer': 'https://github.com/collegeconnect', // Optional OpenRouter tracking
-          'X-Title': 'CollegeConnect Platform',
+          'HTTP-Referer': 'https://github.com/bookmyfest', // Optional OpenRouter tracking
+          'X-Title': 'BookMyFest Platform',
           'Content-Type': 'application/json'
         },
         timeout: 10000 // 10s timeout

@@ -116,6 +116,7 @@ export const getAllJobProfiles = async (req, res, next) => {
             email: true,
             phone: true,
             department: true,
+            isFinalYear: true,
             college: { select: { id: true, name: true } }
           }
         }

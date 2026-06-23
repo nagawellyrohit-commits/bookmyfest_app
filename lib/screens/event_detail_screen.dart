@@ -1,10 +1,15 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import '../theme/app_theme.dart';
 import '../providers/user_provider.dart';
 import '../services/event_service.dart';
+import '../services/auth_service.dart';
 import 'qr_scanner_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class EventDetailScreen extends StatefulWidget {
   final String? eventId;
@@ -66,6 +71,8 @@ class _EventDetailScreenState extends State<EventDetailScreen>
   List<dynamic> _attendance = [];
   List<dynamic> _aiTemplates = [];
   Map<String, dynamic>? _approvedTemplate;
+  bool _isUploadingPoster1 = false;
+  bool _isDescriptionExpanded = false;
 
   @override
   void initState() {
@@ -100,6 +107,129 @@ class _EventDetailScreenState extends State<EventDetailScreen>
     _payRefController.dispose();
     _groupSizeController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickAndUploadPoster1() async {
+    try {
+      final String? source = await showModalBottomSheet<String>(
+        context: context,
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (context) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              const Text(
+                "Select Poster Source",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined, color: AppTheme.primary),
+                title: const Text('Click Photo (Camera)'),
+                onTap: () => Navigator.pop(context, 'camera'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined, color: AppTheme.primary),
+                title: const Text('Upload from Gallery'),
+                onTap: () => Navigator.pop(context, 'gallery'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.picture_as_pdf_outlined, color: AppTheme.primary),
+                title: const Text('Upload PDF Document'),
+                onTap: () => Navigator.pop(context, 'pdf'),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        ),
+      );
+
+      if (source == null) return;
+
+      Uint8List? fileBytes;
+      String? fileName;
+      bool isPdf = false;
+
+      if (source == 'camera' || source == 'gallery') {
+        final ImagePicker picker = ImagePicker();
+        final pickedFile = await picker.pickImage(
+          source: source == 'camera' ? ImageSource.camera : ImageSource.gallery,
+          imageQuality: 85,
+        );
+        if (pickedFile == null) return;
+        fileName = pickedFile.name;
+        fileBytes = await pickedFile.readAsBytes();
+      } else if (source == 'pdf') {
+        final FilePickerResult? result = await FilePicker.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['pdf'],
+          withData: true,
+        );
+        if (result == null) return;
+        final file = result.files.single;
+        fileName = file.name;
+        fileBytes = file.bytes;
+        isPdf = true;
+      }
+
+      if (fileBytes == null || fileName == null) {
+        throw Exception("Could not read file data. Please try again.");
+      }
+
+      // Check size limit: 20MB
+      const maxLimit = 20 * 1024 * 1024;
+      if (fileBytes.length > maxLimit) {
+        throw Exception("File size exceeds 20MB limit.");
+      }
+
+      setState(() {
+        _isUploadingPoster1 = true;
+      });
+
+      String fileUrl;
+      final authService = AuthService();
+      if (isPdf) {
+        fileUrl = await authService.uploadPdf(fileBytes, fileName);
+      } else {
+        fileUrl = await authService.uploadImage(fileBytes, fileName);
+      }
+
+      setState(() {
+        _posterUrl1Controller.text = fileUrl;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Poster 1 uploaded successfully!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll("Exception: ", "")),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingPoster1 = false;
+        });
+      }
+    }
   }
 
   Future<void> _fetchDetails() async {
@@ -179,6 +309,22 @@ class _EventDetailScreenState extends State<EventDetailScreen>
     final diff = dl.difference(DateTime.now());
     if (diff.isNegative) return "REGISTRATION CLOSED";
     return "${diff.inDays}d ${diff.inHours % 24}h ${diff.inMinutes % 60}m ${diff.inSeconds % 60}s left";
+  }
+
+  String _formatDateTime(String dateStr) {
+    try {
+      final dt = DateTime.parse(dateStr).toLocal();
+      final months = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+      ];
+      final hour = dt.hour == 0 ? 12 : (dt.hour > 12 ? dt.hour - 12 : dt.hour);
+      final ampm = dt.hour >= 12 ? "PM" : "AM";
+      final minute = dt.minute.toString().padLeft(2, '0');
+      return "${months[dt.month - 1]} ${dt.day}, ${dt.year} at $hour:$minute $ampm";
+    } catch (_) {
+      return "TBD";
+    }
   }
 
   void _updateEvent() async {
@@ -705,6 +851,23 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                   decoration: AppTheme.inputDecoration(
                     labelText: "Poster URL 1",
                     prefixIcon: Icons.image_outlined,
+                    suffixIcon: _isUploadingPoster1
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: Padding(
+                              padding: EdgeInsets.all(12.0),
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        : IconButton(
+                            icon: const Icon(
+                              Icons.file_upload_outlined,
+                              color: AppTheme.primary,
+                            ),
+                            tooltip: "Upload Poster (Image/PDF)",
+                            onPressed: _pickAndUploadPoster1,
+                          ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -746,24 +909,40 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                   ),
                   trailing: TextButton(
                     onPressed: () async {
+                      final firstDate = DateTime.now().subtract(const Duration(days: 30));
+                      final lastDate = DateTime.now().add(const Duration(days: 365));
+                      DateTime initialDate = _eventDate;
+                      if (initialDate.isBefore(firstDate)) {
+                        initialDate = firstDate;
+                      } else if (initialDate.isAfter(lastDate)) {
+                        initialDate = lastDate;
+                      }
+
                       final date = await showDatePicker(
                         context: context,
-                        initialDate: _eventDate,
-                        firstDate: DateTime.now().subtract(
-                          const Duration(days: 30),
-                        ),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                        initialDate: initialDate,
+                        firstDate: firstDate,
+                        lastDate: lastDate,
                       );
                       if (date != null) {
-                        setState(
-                          () => _eventDate = DateTime(
+                        if (!mounted) return;
+                        final time = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.fromDateTime(_eventDate),
+                        );
+                        setState(() {
+                          _eventDate = DateTime(
                             date.year,
                             date.month,
                             date.day,
-                            _eventDate.hour,
-                            _eventDate.minute,
-                          ),
-                        );
+                            time?.hour ?? _eventDate.hour,
+                            time?.minute ?? _eventDate.minute,
+                          );
+                          // If deadline is now after the new event date, adjust deadline
+                          if (_deadline.isAfter(_eventDate)) {
+                            _deadline = _eventDate;
+                          }
+                        });
                       }
                     },
                     child: const Text("Select"),
@@ -781,24 +960,42 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                   ),
                   trailing: TextButton(
                     onPressed: () async {
+                      final firstDate = DateTime.now().subtract(const Duration(days: 30));
+                      final lastDate = _eventDate;
+                      
+                      // Ensure firstDate <= lastDate
+                      final pickerFirstDate = firstDate.isAfter(lastDate)
+                          ? lastDate.subtract(const Duration(minutes: 1))
+                          : firstDate;
+                      
+                      DateTime initialDate = _deadline;
+                      if (initialDate.isBefore(pickerFirstDate)) {
+                        initialDate = pickerFirstDate;
+                      } else if (initialDate.isAfter(lastDate)) {
+                        initialDate = lastDate;
+                      }
+
                       final date = await showDatePicker(
                         context: context,
-                        initialDate: _deadline,
-                        firstDate: DateTime.now().subtract(
-                          const Duration(days: 30),
-                        ),
-                        lastDate: _eventDate,
+                        initialDate: initialDate,
+                        firstDate: pickerFirstDate,
+                        lastDate: lastDate,
                       );
                       if (date != null) {
-                        setState(
-                          () => _deadline = DateTime(
+                        if (!mounted) return;
+                        final time = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.fromDateTime(_deadline),
+                        );
+                        setState(() {
+                          _deadline = DateTime(
                             date.year,
                             date.month,
                             date.day,
-                            _deadline.hour,
-                            _deadline.minute,
-                          ),
-                        );
+                            time?.hour ?? _deadline.hour,
+                            time?.minute ?? _deadline.minute,
+                          );
+                        });
                       }
                     },
                     child: const Text("Select"),
@@ -931,63 +1128,35 @@ class _EventDetailScreenState extends State<EventDetailScreen>
     final dl = DateTime.parse(ev['registrationDeadline']);
     final isClosed = dl.isBefore(DateTime.now());
 
-    final posters = [
-      ev['posterUrl1'],
-      ev['posterUrl2'],
-      ev['posterUrl3'],
-      ev['posterUrl4'],
-    ].where((url) => url != null && url.toString().isNotEmpty).toList();
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (posters.isNotEmpty) ...[
-          SizedBox(
-            height: 220,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: posters.length,
-              itemBuilder: (context, idx) {
-                return Container(
-                  margin: const EdgeInsets.only(right: 16),
-                  width: 160,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white10),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(15),
-                    child: Image.network(
-                      posters[idx],
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        color: AppTheme.surface,
-                        child: const Icon(
-                          Icons.image_not_supported_outlined,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 20),
-        ],
         Container(
           padding: const EdgeInsets.all(24),
           decoration: AppTheme.cardDecoration(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // 1. Header Row: Title (left), Free/Paid (right)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  Expanded(
+                    child: Text(
+                      ev['title'] ?? 'Event Details',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
+                      horizontal: 12,
+                      vertical: 6,
                     ),
                     decoration: BoxDecoration(
                       color: ev['isPaid']
@@ -1002,41 +1171,305 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                             ? AppTheme.accent
                             : AppTheme.primary,
                         fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
                     ),
                   ),
-                  Text(
-                    ev['college']?['name'] ?? '',
-                    style: const TextStyle(color: AppTheme.textSecondary),
-                  ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+
+              // 2. Poster URL 1 (Full image)
+              (() {
+                final posterUrl = (() {
+                  final url1 = ev['posterUrl1']?.toString() ?? '';
+                  if (url1.isNotEmpty) return url1;
+                  final url2 = ev['posterUrl2']?.toString() ?? '';
+                  if (url2.isNotEmpty) return url2;
+                  final url3 = ev['posterUrl3']?.toString() ?? '';
+                  if (url3.isNotEmpty) return url3;
+                  final url4 = ev['posterUrl4']?.toString() ?? '';
+                  if (url4.isNotEmpty) return url4;
+                  return 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800';
+                })();
+
+                final isPdf = posterUrl.toLowerCase().endsWith('.pdf');
+                return Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(15),
+                    child: isPdf
+                        ? AspectRatio(
+                            aspectRatio: 16 / 10,
+                            child: Stack(
+                              children: [
+                                Positioned.fill(
+                                  child: Image.network(
+                                    'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800',
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                                Positioned.fill(
+                                  child: Material(
+                                    color: Colors.black.withValues(alpha: 0.6),
+                                    child: InkWell(
+                                      onTap: () async {
+                                        final uri = Uri.parse(posterUrl);
+                                        if (await canLaunchUrl(uri)) {
+                                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                        } else {
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text("Could not open PDF URL")),
+                                            );
+                                          }
+                                        }
+                                      },
+                                      child: const Center(
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.picture_as_pdf_rounded,
+                                              color: Colors.white,
+                                              size: 48,
+                                            ),
+                                            SizedBox(height: 8),
+                                            Text(
+                                              "View PDF Poster",
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                            SizedBox(height: 4),
+                                            Text(
+                                              "Tap to open document",
+                                              style: TextStyle(
+                                                color: Colors.white70,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : GestureDetector(
+                            onTap: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => Dialog(
+                                  backgroundColor: Colors.black.withValues(alpha: 0.9),
+                                  insetPadding: EdgeInsets.zero,
+                                  child: Stack(
+                                    alignment: Alignment.topRight,
+                                    children: [
+                                      Positioned.fill(
+                                        child: InteractiveViewer(
+                                          minScale: 0.5,
+                                          maxScale: 4.0,
+                                          child: Center(
+                                            child: Image.network(
+                                              posterUrl,
+                                              fit: BoxFit.contain,
+                                              errorBuilder: (context, error, stackTrace) => Container(
+                                                color: Colors.black,
+                                                child: const Icon(
+                                                  Icons.image_not_supported_outlined,
+                                                  color: Colors.white,
+                                                  size: 80,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      SafeArea(
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(16.0),
+                                          child: IconButton(
+                                            icon: const Icon(
+                                              Icons.close_rounded,
+                                              color: Colors.white,
+                                              size: 32,
+                                            ),
+                                            onPressed: () => Navigator.pop(context),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                            child: AspectRatio(
+                              aspectRatio: 16 / 10,
+                              child: Image.network(
+                                posterUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => Image.network(
+                                  'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800',
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                          ),
+                  ),
+                );
+              })(),
+
+              // 3. Other posters (2, 3, 4) thumbnail row
+              (() {
+                final otherPosters = [
+                  ev['posterUrl2'],
+                  ev['posterUrl3'],
+                  ev['posterUrl4'],
+                ].where((url) => url != null && url.toString().isNotEmpty).toList();
+                
+                if (otherPosters.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+                
+                return Container(
+                  height: 60,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: otherPosters.length,
+                    itemBuilder: (context, idx) {
+                      final posterUrl = otherPosters[idx].toString();
+                      final isPdf = posterUrl.toLowerCase().endsWith('.pdf');
+                      return GestureDetector(
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => Dialog(
+                              backgroundColor: Colors.black.withValues(alpha: 0.9),
+                              insetPadding: EdgeInsets.zero,
+                              child: Stack(
+                                alignment: Alignment.topRight,
+                                children: [
+                                  Positioned.fill(
+                                    child: InteractiveViewer(
+                                      minScale: 0.5,
+                                      maxScale: 4.0,
+                                      child: Center(
+                                        child: isPdf
+                                            ? const Icon(Icons.picture_as_pdf, color: Colors.white, size: 80)
+                                            : Image.network(
+                                                posterUrl,
+                                                fit: BoxFit.contain,
+                                              ),
+                                      ),
+                                    ),
+                                  ),
+                                  SafeArea(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16.0),
+                                      child: IconButton(
+                                        icon: const Icon(
+                                          Icons.close_rounded,
+                                          color: Colors.white,
+                                          size: 32,
+                                        ),
+                                        onPressed: () => Navigator.pop(context),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          width: 60,
+                          margin: const EdgeInsets.only(right: 12),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(7),
+                            child: isPdf
+                                ? const Icon(Icons.picture_as_pdf, color: Colors.red, size: 24)
+                                : Image.network(posterUrl, fit: BoxFit.cover),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              })(),
+
+              // 4. College Name
               Text(
-                ev['title'],
+                ev['college']?['name']?.toString() ?? '',
                 style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
                 ),
               ),
-              const SizedBox(height: 12),
-              Text(
-                ev['description'] ?? 'No description provided.',
-                style: const TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontSize: 15,
-                  height: 1.4,
-                ),
-              ),
+              const SizedBox(height: 10),
+
+              // 5. Description
+              (() {
+                final descriptionText = ev['description']?.toString() ?? 'No description provided.';
+                final shouldTruncate = descriptionText.length > 120;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      shouldTruncate && !_isDescriptionExpanded
+                          ? "${descriptionText.substring(0, 120)}..."
+                          : descriptionText,
+                      style: const TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 15,
+                        height: 1.45,
+                      ),
+                    ),
+                    if (shouldTruncate) ...[
+                      const SizedBox(height: 6),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _isDescriptionExpanded = !_isDescriptionExpanded;
+                          });
+                        },
+                        child: Text(
+                          _isDescriptionExpanded ? "less" : "more.",
+                          style: const TextStyle(
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              })(),
               const SizedBox(height: 20),
               Container(height: 1, color: Colors.white.withValues(alpha: 0.05)),
               const SizedBox(height: 20),
+
+              // 6. Details table
               _detailRow(
                 Icons.calendar_today,
                 "Event Date",
-                DateTime.parse(
-                  ev['eventDate'],
-                ).toLocal().toString().substring(0, 16),
+                _formatDateTime(ev['eventDate']),
               ),
               _detailRow(
                 Icons.timer_outlined,
@@ -1494,9 +1927,8 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                   ),
                   const SizedBox(height: 12),
 
-                  // Simulated QR Image
                   Image.network(
-                    "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=${ev['upiId']}&pn=CollegeConnect&am=${ev['entryFee']}&cu=INR",
+                    "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=${ev['upiId']}&pn=BookMyFest&am=${ev['entryFee']}&cu=INR",
                     height: 120,
                     width: 120,
                     errorBuilder: (context, error, stackTrace) =>

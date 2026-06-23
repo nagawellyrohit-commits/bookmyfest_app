@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   // Brand Colors matching Sign In and Registration screens (Deep Pink, Purple, light mode background/cards/text)
-  static const Color primary = Color(0xffED1383); // Brand Pink
+  static const Color primary = Color(0xff9708AA); // Brand Pink
   static const Color secondary = Color(0xff9708AA); // Brand Purple
   static const Color background = Color(0xFFF8FAFC); // Light grey/white
   static const Color surface = Colors.white; // White Card
   static const Color textPrimary = Color(0xFF0F172A); // Dark Slate Heading
   static const Color textSecondary = Color(0xFF64748B); // Slate Grey Subtitle
-  static const Color accent = Color(0xffED1383); // Brand Pink
+  static const Color accent = Color(0xff9708AA); // Brand Pink
 
   // Sleek Gradient for buttons and highlights
   static const Gradient primaryGradient = LinearGradient(

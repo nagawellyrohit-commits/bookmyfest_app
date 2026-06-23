@@ -22,7 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
-  final Color _brandColor = const Color(0xffED1383);
+  final Color _brandColor = const Color(0xff9708AA);
 
   String get _displayRole {
     if (widget.selectedRole == null) return "Centralized Multi-College Events";
