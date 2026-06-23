@@ -85,10 +85,43 @@ export const createEvent = async (req, res, next) => {
         eventType: eventType || 'individual',
         minMembers: minMembers ? Number(minMembers) : 1,
         maxMembers: maxMembers ? Number(maxMembers) : 1,
-        isApproved: true,
+        isApproved: actor.role === 'coordinator' ? false : true,
         isPendingDeletion: false
       }
     });
+
+    // Send email notifications to faculties if created by a coordinator
+    if (actor.role === 'coordinator') {
+      try {
+        const coordinatorUser = await prisma.user.findUnique({
+          where: { id: actor.id },
+          select: { fullName: true }
+        });
+        const coordinatorName = coordinatorUser?.fullName || 'A coordinator';
+
+        const faculties = await prisma.user.findMany({
+          where: {
+            role: 'faculty_admin',
+            collegeId: actor.collegeId,
+            isVerified: true
+          },
+          select: {
+            email: true,
+            fullName: true
+          }
+        });
+        for (const faculty of faculties) {
+          const subject = `New Event Pending Approval: ${event.title}`;
+          const text = `Hello ${faculty.fullName},\n\nCoordinator ${coordinatorName} has created a new event "${event.title}" and it is pending your approval.\n\nPlease log in to review and approve this event.`;
+          const html = `<p>Hello <strong>${faculty.fullName}</strong>,</p>
+                        <p>Coordinator <strong>${coordinatorName}</strong> has created a new event <strong>"${event.title}"</strong> and it is pending your approval.</p>
+                        <p>Please log in to review and approve this event.</p>`;
+          sendEmailNotification(faculty.email, subject, text, html).catch(err => console.error("Error sending email to faculty:", err));
+        }
+      } catch (err) {
+        console.error("Error sending event creation email notification to faculties:", err);
+      }
+    }
 
     // Write to audit log
     await logAudit(
@@ -120,6 +153,11 @@ export const getAllEvents = async (req, res, next) => {
     // Faculty admins and Coordinators are strictly restricted to their college events
     if (actor.role === 'faculty_admin' || actor.role === 'coordinator') {
       whereClause.collegeId = actor.collegeId;
+    }
+
+    // Students and guests only see approved events
+    if (actor.role === 'student' || actor.role === 'guest') {
+      whereClause.isApproved = true;
     }
 
     const events = await prisma.event.findMany({
@@ -182,6 +220,14 @@ export const getEventById = async (req, res, next) => {
 
     if (!event) {
       return res.status(404).json({ success: false, message: 'Event not found' });
+    }
+
+    // Students and guests cannot view unapproved events
+    if ((actor.role === 'student' || actor.role === 'guest') && !event.isApproved) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: Event is pending approval'
+      });
     }
 
     // Faculty admin & coordinator restricted to college
@@ -395,6 +441,7 @@ export const getPendingEventApprovals = async (req, res, next) => {
       where: {
         collegeId: actor.role === 'super_admin' ? undefined : actor.collegeId,
         OR: [
+          { isApproved: false },
           { isPendingDeletion: true },
           { pendingUpdates: { not: Prisma.AnyNull } }
         ]
@@ -428,8 +475,8 @@ export const approveEventUpdate = async (req, res, next) => {
     }
 
     const event = await prisma.event.findUnique({ where: { id } });
-    if (!event || !event.pendingUpdates) {
-      return res.status(404).json({ success: false, message: 'Event or pending updates not found' });
+    if (!event || (!event.pendingUpdates && event.isApproved)) {
+      return res.status(404).json({ success: false, message: 'Event or pending approvals not found' });
     }
 
     if (actor.role !== 'super_admin' && event.collegeId !== actor.collegeId) {
@@ -439,27 +486,33 @@ export const approveEventUpdate = async (req, res, next) => {
     const updates = event.pendingUpdates;
     const finalData = { pendingUpdates: null }; // clear pending updates
 
-    if (updates.title !== undefined) finalData.title = updates.title;
-    if (updates.description !== undefined) finalData.description = updates.description;
-    if (updates.eventDate !== undefined) finalData.eventDate = new Date(updates.eventDate);
-    if (updates.registrationDeadline !== undefined) finalData.registrationDeadline = new Date(updates.registrationDeadline);
-    if (updates.isPaid !== undefined) {
-      finalData.isPaid = !!updates.isPaid;
-      finalData.entryFee = updates.isPaid ? Number(updates.entryFee || 0) : 0.00;
-      finalData.upiId = updates.isPaid ? updates.upiId : null;
+    if (!event.isApproved) {
+      finalData.isApproved = true;
     }
-    if (updates.branch !== undefined) finalData.branch = updates.branch;
-    if (updates.category !== undefined) finalData.category = updates.category;
-    if (updates.brochureUrl !== undefined) finalData.brochureUrl = updates.brochureUrl;
-    if (updates.brochurePages !== undefined) finalData.brochurePages = Number(updates.brochurePages);
-    if (updates.posterUrl1 !== undefined) finalData.posterUrl1 = updates.posterUrl1;
-    if (updates.posterUrl2 !== undefined) finalData.posterUrl2 = updates.posterUrl2;
-    if (updates.posterUrl3 !== undefined) finalData.posterUrl3 = updates.posterUrl3;
-    if (updates.posterUrl4 !== undefined) finalData.posterUrl4 = updates.posterUrl4;
-    if (updates.whatsAppGroupLink !== undefined) finalData.whatsAppGroupLink = updates.whatsAppGroupLink;
-    if (updates.eventType !== undefined) finalData.eventType = updates.eventType;
-    if (updates.minMembers !== undefined) finalData.minMembers = Number(updates.minMembers);
-    if (updates.maxMembers !== undefined) finalData.maxMembers = Number(updates.maxMembers);
+
+    if (updates) {
+      if (updates.title !== undefined) finalData.title = updates.title;
+      if (updates.description !== undefined) finalData.description = updates.description;
+      if (updates.eventDate !== undefined) finalData.eventDate = new Date(updates.eventDate);
+      if (updates.registrationDeadline !== undefined) finalData.registrationDeadline = new Date(updates.registrationDeadline);
+      if (updates.isPaid !== undefined) {
+        finalData.isPaid = !!updates.isPaid;
+        finalData.entryFee = updates.isPaid ? Number(updates.entryFee || 0) : 0.00;
+        finalData.upiId = updates.isPaid ? updates.upiId : null;
+      }
+      if (updates.branch !== undefined) finalData.branch = updates.branch;
+      if (updates.category !== undefined) finalData.category = updates.category;
+      if (updates.brochureUrl !== undefined) finalData.brochureUrl = updates.brochureUrl;
+      if (updates.brochurePages !== undefined) finalData.brochurePages = Number(updates.brochurePages);
+      if (updates.posterUrl1 !== undefined) finalData.posterUrl1 = updates.posterUrl1;
+      if (updates.posterUrl2 !== undefined) finalData.posterUrl2 = updates.posterUrl2;
+      if (updates.posterUrl3 !== undefined) finalData.posterUrl3 = updates.posterUrl3;
+      if (updates.posterUrl4 !== undefined) finalData.posterUrl4 = updates.posterUrl4;
+      if (updates.whatsAppGroupLink !== undefined) finalData.whatsAppGroupLink = updates.whatsAppGroupLink;
+      if (updates.eventType !== undefined) finalData.eventType = updates.eventType;
+      if (updates.minMembers !== undefined) finalData.minMembers = Number(updates.minMembers);
+      if (updates.maxMembers !== undefined) finalData.maxMembers = Number(updates.maxMembers);
+    }
 
     const updatedEvent = await prisma.event.update({
       where: { id },
@@ -489,11 +542,19 @@ export const approveEventUpdate = async (req, res, next) => {
       });
       const eventTitle = updatedEvent.title || event.title;
       for (const coord of coordinators) {
-        const subject = `Event Update Approved: ${eventTitle}`;
-        const text = `Hello ${coord.fullName},\n\nThe proposed updates for the event "${eventTitle}" have been approved by ${actorName}.\n\nYou can now view the updated event on BookMyFest.`;
-        const html = `<p>Hello <strong>${coord.fullName}</strong>,</p>
-                      <p>The proposed updates for the event <strong>"${eventTitle}"</strong> have been approved by <strong>${actorName}</strong>.</p>
-                      <p>You can now view the updated event on BookMyFest.</p>`;
+        const subject = event.isApproved
+          ? `Event Update Approved: ${eventTitle}`
+          : `Event Created/Approved: ${eventTitle}`;
+        const text = event.isApproved
+          ? `Hello ${coord.fullName},\n\nThe proposed updates for the event "${eventTitle}" have been approved by ${actorName}.\n\nYou can now view the updated event on BookMyFest.`
+          : `Hello ${coord.fullName},\n\nThe event "${eventTitle}" has been approved and published by ${actorName}.\n\nYou can now view the event on BookMyFest.`;
+        const html = event.isApproved
+          ? `<p>Hello <strong>${coord.fullName}</strong>,</p>
+             <p>The proposed updates for the event <strong>"${eventTitle}"</strong> have been approved by <strong>${actorName}</strong>.</p>
+             <p>You can now view the updated event on BookMyFest.</p>`
+          : `<p>Hello <strong>${coord.fullName}</strong>,</p>
+             <p>The event <strong>"${eventTitle}"</strong> has been approved and published by <strong>${actorName}</strong>.</p>
+             <p>You can now view the event on BookMyFest.</p>`;
         sendEmailNotification(coord.email, subject, text, html).catch(err => console.error("Error sending email to coordinator:", err));
       }
     } catch (err) {
@@ -528,6 +589,53 @@ export const rejectEventUpdate = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Access denied: college mismatch' });
     }
 
+    // Get actor user name for emails
+    let actorName = 'Faculty/Admin';
+    try {
+      const actorUser = await prisma.user.findUnique({
+        where: { id: actor.id },
+        select: { fullName: true }
+      });
+      if (actorUser) actorName = actorUser.fullName;
+    } catch (err) {
+      console.error(err);
+    }
+
+    if (!event.isApproved) {
+      await prisma.event.delete({ where: { id } });
+
+      // Send email notifications to coordinators of the same college
+      try {
+        const coordinators = await prisma.user.findMany({
+          where: {
+            role: 'coordinator',
+            collegeId: event.collegeId,
+            isVerified: true
+          },
+          select: {
+            email: true,
+            fullName: true
+          }
+        });
+        const eventTitle = event.title;
+        for (const coord of coordinators) {
+          const subject = `Event Creation Rejected: ${eventTitle}`;
+          const text = `Hello ${coord.fullName},\n\nThe request to create/publish the event "${eventTitle}" has been rejected/discarded by ${actorName}.`;
+          const html = `<p>Hello <strong>${coord.fullName}</strong>,</p>
+                        <p>The request to create/publish the event <strong>"${eventTitle}"</strong> has been rejected/discarded by <strong>${actorName}</strong>.</p>`;
+          sendEmailNotification(coord.email, subject, text, html).catch(err => console.error("Error sending email to coordinator:", err));
+        }
+      } catch (err) {
+        console.error("Error sending event creation rejection email notification to coordinators:", err);
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Event creation request rejected and event deleted',
+        data: { id, isDeleted: true }
+      });
+    }
+
     const updatedEvent = await prisma.event.update({
       where: { id },
       data: { pendingUpdates: null }
@@ -535,12 +643,6 @@ export const rejectEventUpdate = async (req, res, next) => {
 
     // Send email notifications to coordinators of the same college
     try {
-      const actorUser = await prisma.user.findUnique({
-        where: { id: actor.id },
-        select: { fullName: true }
-      });
-      const actorName = actorUser?.fullName || 'Faculty/Admin';
-
       const coordinators = await prisma.user.findMany({
         where: {
           role: 'coordinator',

@@ -177,251 +177,275 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           // 2. Main content area
           if (_isImageLoaded)
             SafeArea(
-              child: Column(
-                children: [
-                  Expanded(
-                    child: Center(
-                      child: SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isSmallScreen = constraints.maxHeight < 620;
+                  return SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
+                      ),
+                      child: IntrinsicHeight(
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            // Logo from assets
-                            Image.asset(
-                              'assets/images/logo.png',
-                              width: 140,
-                              height: 140,
-                              fit: BoxFit.contain,
-                            ),
-                            const SizedBox(height: 2),
-
-                            // Institute Name
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                              ),
-                              child: Text.rich(
-                                const TextSpan(
-                                  style: TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: -0.5,
-                                  ),
-                                  children: [
-                                    TextSpan(
-                                      text: "bookmy",
-                                      style: TextStyle(
-                                        color: Color(0xffED1383),
-                                      ),
-                                    ),
-                                    TextSpan(
-                                      text: "fest",
-                                      style: TextStyle(
-                                        color: Color(0xff9708AA),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Title
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                              ),
-                              child: Text(
-                                _title,
-                                style: const TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color.fromARGB(255, 13, 13, 13),
-                                  height: 1.25,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-
-                            // Subtitle
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                              ),
-                              child: Text(
-                                _subtitle,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFFE5A93B),
-                                  letterSpacing: 0.5,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Action Button area
-                  AnimatedBuilder(
-                    animation: Listenable.merge([
-                      _controller,
-                      _shakeController,
-                      _zoomController,
-                    ]),
-                    builder: (context, child) {
-                      final val = _buttonScaleAnimation.value;
-                      final zoomScale = _zoomScaleAnimation.value;
-                      final zoomOpacity = _zoomOpacityAnimation.value;
-                      final shakeVal = _shakeAnimation.value;
-
-                      return Transform.scale(
-                        scale: val * zoomScale,
-                        child: Opacity(
-                          opacity: (val.clamp(0.0, 1.0) * zoomOpacity).clamp(
-                            0.0,
-                            1.0,
-                          ),
-                          child: Transform.translate(
-                            offset: Offset(shakeVal * 5.0, 0.0),
-                            child: Transform.rotate(
-                              angle: shakeVal * 0.02,
-                              child: child,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 24,
-                      ),
-                      child: Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              _brandColor,
-                              _brandColor.withValues(alpha: 0.8),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(18),
-                          boxShadow: [
-                            BoxShadow(
-                              color: _brandColor.withValues(alpha: 0.4),
-                              blurRadius: 15,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                          ),
-                          onPressed: () async {
-                            if (_isNavigating || !_controller.isCompleted) {
-                              return;
-                            }
-
-                            setState(() {
-                              _isNavigating = true;
-                            });
-
-                            // Stop shake immediately and reset to center
-                            _shakeController.stop();
-                            _shakeController.reset();
-
-                            // Play zoom scale-up and fade-out animation
-                            await _zoomController.forward();
-
-                            if (!context.mounted) return;
-
-                            // Navigate to SelectLoginScreen
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => SelectLoginScreen(
-                                  brandColor: _brandColor,
-                                  instituteName: _instituteName,
-                                ),
-                              ),
-                            );
-
-                            // Once returned from SelectLoginScreen:
-                            // Reset zoom, reset navigation state, and restart shake
-                            _zoomController.reset();
-                            setState(() {
-                              _isNavigating = false;
-                            });
-                            _shakeController.repeat();
-                          },
-                          child: AnimatedBuilder(
-                            animation: _textCharCountAnimation,
-                            builder: (context, child) {
-                              final count = _textCharCountAnimation.value;
-                              final visibleText = "Get Started".substring(
-                                0,
-                                count,
-                              );
-                              return Row(
+                            // 1. Top branding and scrollable info section
+                            Expanded(
+                              child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Text(
-                                    visibleText,
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
+                                  const SizedBox(height: 20),
+                                  // Logo from assets
+                                  Image.asset(
+                                    'assets/images/logo.png',
+                                    width: isSmallScreen ? 110 : 140,
+                                    height: isSmallScreen ? 110 : 140,
+                                    fit: BoxFit.contain,
+                                  ),
+                                  const SizedBox(height: 2),
+
+                                  // Institute Name
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                    ),
+                                    child: Text.rich(
+                                      const TextSpan(
+                                        style: TextStyle(
+                                          fontSize: 28,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: -0.5,
+                                        ),
+                                        children: [
+                                          TextSpan(
+                                            text: "bookmy",
+                                            style: TextStyle(
+                                              color: Color(0xffED1383),
+                                            ),
+                                          ),
+                                          TextSpan(
+                                            text: "fest",
+                                            style: TextStyle(
+                                              color: Color(0xff9708AA),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      textAlign: TextAlign.center,
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  ScaleTransition(
-                                    scale: _iconPopAnimation,
-                                    child: const Icon(
-                                      Icons.arrow_forward,
-                                      color: Colors.white,
-                                      size: 20,
+                                  const SizedBox(height: 12),
+
+                                  // Title
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                    ),
+                                    child: Text(
+                                      _title,
+                                      style: TextStyle(
+                                        fontSize: isSmallScreen ? 24 : 28,
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color.fromARGB(
+                                          255,
+                                          13,
+                                          13,
+                                          13,
+                                        ),
+                                        height: 1.25,
+                                      ),
+                                      textAlign: TextAlign.center,
                                     ),
                                   ),
+                                  const SizedBox(height: 8),
+
+                                  // Subtitle
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                    ),
+                                    child: Text(
+                                      _subtitle,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFFE5A93B),
+                                        letterSpacing: 0.5,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+
+                                  if (_sponsors.isNotEmpty) ...[
+                                    const SizedBox(height: 48),
+                                    const Text(
+                                      "Our Event Co-Partners",
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF64748B),
+                                        letterSpacing: 0.8,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    _SponsorshipMarquee(sponsors: _sponsors),
+                                  ],
+                                  const SizedBox(height: 12),
                                 ],
-                              );
-                            },
-                          ),
+                              ),
+                            ),
+
+                            // 2. Action Button area (placed higher up to clear background icons)
+                            AnimatedBuilder(
+                              animation: Listenable.merge([
+                                _controller,
+                                _shakeController,
+                                _zoomController,
+                              ]),
+                              builder: (context, child) {
+                                final val = _buttonScaleAnimation.value;
+                                final zoomScale = _zoomScaleAnimation.value;
+                                final zoomOpacity = _zoomOpacityAnimation.value;
+                                final shakeVal = _shakeAnimation.value;
+
+                                return Transform.scale(
+                                  scale: val * zoomScale,
+                                  child: Opacity(
+                                    opacity: (val.clamp(0.0, 1.0) * zoomOpacity)
+                                        .clamp(0.0, 1.0),
+                                    child: Transform.translate(
+                                      offset: Offset(shakeVal * 5.0, 0.0),
+                                      child: Transform.rotate(
+                                        angle: shakeVal * 0.02,
+                                        child: child,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 32,
+                                  vertical: isSmallScreen ? 12 : 18,
+                                ),
+                                child: Container(
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        _brandColor,
+                                        _brandColor.withValues(alpha: 0.8),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(18),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: _brandColor.withValues(
+                                          alpha: 0.4,
+                                        ),
+                                        blurRadius: 15,
+                                        offset: const Offset(0, 6),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.transparent,
+                                      shadowColor: Colors.transparent,
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 18,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(18),
+                                      ),
+                                    ),
+                                    onPressed: () async {
+                                      if (_isNavigating ||
+                                          !_controller.isCompleted) {
+                                        return;
+                                      }
+
+                                      setState(() {
+                                        _isNavigating = true;
+                                      });
+
+                                      // Stop shake immediately and reset to center
+                                      _shakeController.stop();
+                                      _shakeController.reset();
+
+                                      // Play zoom scale-up and fade-out animation
+                                      await _zoomController.forward();
+
+                                      if (!context.mounted) return;
+
+                                      // Navigate to SelectLoginScreen
+                                      await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              SelectLoginScreen(
+                                                brandColor: _brandColor,
+                                                instituteName: _instituteName,
+                                              ),
+                                        ),
+                                      );
+
+                                      // Once returned from SelectLoginScreen:
+                                      // Reset zoom, reset navigation state, and restart shake
+                                      _zoomController.reset();
+                                      setState(() {
+                                        _isNavigating = false;
+                                      });
+                                      _shakeController.repeat();
+                                    },
+                                    child: AnimatedBuilder(
+                                      animation: _textCharCountAnimation,
+                                      builder: (context, child) {
+                                        final count =
+                                            _textCharCountAnimation.value;
+                                        final visibleText = "Get Started"
+                                            .substring(0, count);
+                                        return Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              visibleText,
+                                              style: const TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            ScaleTransition(
+                                              scale: _iconPopAnimation,
+                                              child: const Icon(
+                                                Icons.arrow_forward,
+                                                color: Colors.white,
+                                                size: 20,
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            // Bottom spacer to ensure the Get Started button sits cleanly above the background icons
+                            SizedBox(height: isSmallScreen ? 70 : 95),
+                          ],
                         ),
                       ),
                     ),
-                  ),
-
-                  if (_sponsors.isNotEmpty) ...[
-                    const SizedBox(height: 0.5),
-                    const Text(
-                      "Our App Sponsors",
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF64748B),
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                    const SizedBox(height: 0),
-                    _SponsorshipMarquee(sponsors: _sponsors),
-                  ],
-                  const SizedBox(height: 80),
-                ],
+                  );
+                },
               ),
             ),
         ],
@@ -458,44 +482,12 @@ class _SponsorshipMarqueeState extends State<_SponsorshipMarquee> {
     super.dispose();
   }
 
-  double _getSponsorWidth(dynamic sp) {
-    final logoUrl = sp['logoUrl']?.toString() ?? '';
-    final nameText = sp['name']?.toString() ?? '';
-    final nameImageUrl = sp['subtitle']?.toString() ?? '';
-
-    final bool hasLogo = logoUrl.isNotEmpty;
-    final bool hasNameText = nameText.isNotEmpty;
-    final bool hasNameImage =
-        nameImageUrl.isNotEmpty && nameImageUrl.startsWith('http');
-
-    double width = 0;
-    if (hasLogo) width += 52;
-    if (hasLogo && (hasNameText || hasNameImage)) width += 6;
-    if (hasNameText) {
-      final textPainter = TextPainter(
-        text: TextSpan(
-          text: nameText,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-        ),
-        textDirection: TextDirection.ltr,
-        maxLines: 1,
-      )..layout();
-      width += textPainter.width + 4.0;
-    }
-    if (hasNameImage) width += 80;
-
-    return width + 16; // 8 padding on left and right (total 16)
-  }
-
   void _startScrolling() {
     _timer = Timer.periodic(const Duration(milliseconds: 30), (timer) {
       if (!mounted) return;
       if (_scrollController.hasClients) {
         final currentPosition = _scrollController.position.pixels;
-        final double singleCycleWidth = widget.sponsors.fold(
-          0.0,
-          (sum, sp) => sum + _getSponsorWidth(sp),
-        );
+        final double singleCycleWidth = widget.sponsors.length * 90.0;
 
         double nextPosition = currentPosition + 0.8;
         if (nextPosition >= singleCycleWidth) {
@@ -510,10 +502,7 @@ class _SponsorshipMarqueeState extends State<_SponsorshipMarquee> {
 
   @override
   Widget build(BuildContext context) {
-    final double singleCycleWidth = widget.sponsors.fold(
-      0.0,
-      (sum, sp) => sum + _getSponsorWidth(sp),
-    );
+    final double singleCycleWidth = widget.sponsors.length * 90.0;
     final screenWidth = MediaQuery.of(context).size.width;
     final targetWidth = screenWidth + singleCycleWidth;
     final repeatCount =
@@ -526,91 +515,53 @@ class _SponsorshipMarqueeState extends State<_SponsorshipMarquee> {
     }
 
     return Container(
-      height: 85,
-      margin: const EdgeInsets.only(top: 0, bottom: 2),
+      height: 70,
+      margin: const EdgeInsets.only(top: 8, bottom: 2),
       color: Colors.transparent,
       child: Center(
-        child: ListView.builder(
-          controller: _scrollController,
-          scrollDirection: Axis.horizontal,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: EdgeInsets.zero,
-          itemCount: displayList.length,
-          itemBuilder: (context, index) {
-            final sp = displayList[index];
-            final logoUrl = sp['logoUrl']?.toString() ?? '';
-            final nameText = sp['name']?.toString() ?? '';
-            final nameImageUrl = sp['subtitle']?.toString() ?? '';
-
-            final bool hasLogo = logoUrl.isNotEmpty;
-            final bool hasNameText = nameText.isNotEmpty;
-            final bool hasNameImage =
-                nameImageUrl.isNotEmpty && nameImageUrl.startsWith('http');
-
-            return Container(
-              width: _getSponsorWidth(sp),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (hasLogo) ...[
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: Container(
-                        width: 52,
-                        height: 52,
-                        color: Colors.transparent,
-                        child: Image.network(
-                          logoUrl,
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(
-                                Icons.broken_image_outlined,
-                                size: 24,
-                                color: Color(0xFF64748B),
-                              ),
-                        ),
-                      ),
-                    ),
-                  ],
-                  if (hasLogo && (hasNameText || hasNameImage))
-                    const SizedBox(width: 6),
-                  if (hasNameText)
-                    Flexible(
-                      child: Text(
-                        nameText,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E293B),
-                        ),
-                      ),
-                    )
-                  else if (hasNameImage)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: Container(
-                        width: 80,
-                        height: 40,
-                        color: Colors.transparent,
-                        child: Image.network(
-                          nameImageUrl,
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(
-                                Icons.broken_image_outlined,
-                                size: 20,
-                                color: Color(0xFF64748B),
-                              ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            );
+        child: ShaderMask(
+          shaderCallback: (Rect bounds) {
+            return const LinearGradient(
+              colors: [
+                Colors.transparent,
+                Colors.white,
+                Colors.white,
+                Colors.transparent,
+              ],
+              stops: [0.0, 0.15, 0.85, 1.0],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ).createShader(bounds);
           },
+          blendMode: BlendMode.dstIn,
+          child: ListView.builder(
+            controller: _scrollController,
+            scrollDirection: Axis.horizontal,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
+            itemCount: displayList.length,
+            itemBuilder: (context, index) {
+              final sp = displayList[index];
+              final logoUrl = sp['logoUrl']?.toString() ?? '';
+
+              if (logoUrl.isEmpty) return const SizedBox.shrink();
+
+              return Container(
+                width: 90,
+                alignment: Alignment.center,
+                child: Image.network(
+                  logoUrl,
+                  height: 48,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.business_outlined,
+                    size: 24,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       ),
     );

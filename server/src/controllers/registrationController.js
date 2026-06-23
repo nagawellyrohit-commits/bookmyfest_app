@@ -19,6 +19,11 @@ export const registerForEvent = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Event not found' });
     }
 
+    // Check if event is approved
+    if (!event.isApproved) {
+      return res.status(403).json({ success: false, message: 'Cannot register: Event is pending approval by faculty' });
+    }
+
     // 2. Check registration deadline
     if (new Date() > new Date(event.registrationDeadline)) {
       return res.status(400).json({ success: false, message: 'Registration deadline has passed' });

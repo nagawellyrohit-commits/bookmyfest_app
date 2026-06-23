@@ -6,6 +6,8 @@ import multer from 'multer';
 import path from 'path';
 import { createWorker } from 'tesseract.js';
 
+const resetCodes = new Map();
+
 // Register a new user
 export const register = async (req, res, next) => {
   const {
@@ -974,5 +976,133 @@ function verifyOcrMatch(extractedText, fullName, collegeName, department) {
   console.log('[OCR Match Results] nameMatch:', nameMatch, '| collegeMatch:', collegeMatch);
   return nameMatch && collegeMatch;
 }
+
+export const forgotPassword = async (req, res, next) => {
+  const { email } = req.body;
+  try {
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found with this email' });
+    }
+
+    // Generate 6 digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = Date.now() + 10 * 60 * 1000; // 10 minutes expiry
+
+    resetCodes.set(email.trim().toLowerCase(), { code, expires });
+
+    // Send code via email
+    const subject = 'Password Reset Code - BookmyFest';
+    const text = `Hello ${user.fullName},\n\nYour password reset verification code is: ${code}.\n\nThis code is valid for 10 minutes.`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <h2 style="color: #4f46e5; text-align: center;">Reset Your Password</h2>
+        <p>Hello <strong>${user.fullName}</strong>,</p>
+        <p>We received a request to reset your password. Use the following verification code to proceed:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <span style="font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #4f46e5; border: 1px dashed #4f46e5; padding: 10px 20px; border-radius: 4px;">${code}</span>
+        </div>
+        <p>This code is valid for <strong>10 minutes</strong>. If you did not request a password reset, you can safely ignore this email.</p>
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+        <p style="font-size: 12px; color: #64748b; text-align: center;">&copy; BookmyFest. All rights reserved.</p>
+      </div>
+    `;
+
+    await sendEmailNotification(user.email, subject, text, html);
+
+    res.status(200).json({
+      success: true,
+      message: 'Password reset code sent successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const verifyResetCode = async (req, res, next) => {
+  const { email, code } = req.body;
+  try {
+    if (!email || !code) {
+      return res.status(400).json({ success: false, message: 'Email and code are required' });
+    }
+
+    const key = email.trim().toLowerCase();
+    const stored = resetCodes.get(key);
+
+    if (!stored) {
+      return res.status(400).json({ success: false, message: 'No reset code requested or code has expired' });
+    }
+
+    if (stored.expires < Date.now()) {
+      resetCodes.delete(key);
+      return res.status(400).json({ success: false, message: 'Reset code has expired' });
+    }
+
+    if (stored.code !== code.trim()) {
+      return res.status(400).json({ success: false, message: 'Invalid verification code' });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Code verified successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resetPassword = async (req, res, next) => {
+  const { email, code, newPassword } = req.body;
+  try {
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Email, code, and new password are required' });
+    }
+
+    const key = email.trim().toLowerCase();
+    const stored = resetCodes.get(key);
+
+    if (!stored) {
+      return res.status(400).json({ success: false, message: 'No reset code requested or code has expired' });
+    }
+
+    if (stored.expires < Date.now()) {
+      resetCodes.delete(key);
+      return res.status(400).json({ success: false, message: 'Reset code has expired' });
+    }
+
+    if (stored.code !== code.trim()) {
+      return res.status(400).json({ success: false, message: 'Invalid verification code' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: key } });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Hash the new password
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+
+    // Update in database
+    await prisma.user.update({
+      where: { email: key },
+      data: { passwordHash }
+    });
+
+    // Delete the code so it cannot be reused
+    resetCodes.delete(key);
+
+    res.status(200).json({
+      success: true,
+      message: 'Password reset successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 

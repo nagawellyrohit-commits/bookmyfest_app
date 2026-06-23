@@ -350,4 +350,68 @@ class AuthService {
       throw Exception(e.toString().replaceAll("Exception: ", ""));
     }
   }
+
+  // Forgot Password - Step 1: Send Verification Code
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/auth/forgot-password"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"email": email.trim()}),
+      );
+
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        return responseData;
+      } else {
+        throw Exception(responseData['message'] ?? 'Failed to send reset code');
+      }
+    } catch (e) {
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
+    }
+  }
+
+  // Forgot Password - Step 2: Verify Code
+  Future<Map<String, dynamic>> verifyResetCode(String email, String code) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/auth/verify-reset-code"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"email": email.trim(), "code": code.trim()}),
+      );
+
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        return responseData;
+      } else {
+        throw Exception(responseData['message'] ?? 'Invalid code or verification failed');
+      }
+    } catch (e) {
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
+    }
+  }
+
+  // Forgot Password - Step 3: Reset Password
+  Future<Map<String, dynamic>> resetPassword(String email, String code, String newPassword) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/auth/reset-password"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "email": email.trim(),
+          "code": code.trim(),
+          "newPassword": newPassword,
+        }),
+      );
+
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        return responseData;
+      } else {
+        throw Exception(responseData['message'] ?? 'Failed to reset password');
+      }
+    } catch (e) {
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
+    }
+  }
 }

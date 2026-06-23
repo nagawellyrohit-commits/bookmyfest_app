@@ -275,8 +275,8 @@ class _EventDetailScreenState extends State<EventDetailScreen>
           _isPaid = data['isPaid'] ?? false;
           _feeController.text = (data['entryFee'] ?? 0.00).toString();
           _upiController.text = data['upiId'] ?? '';
-          _eventDate = DateTime.parse(data['eventDate']);
-          _deadline = DateTime.parse(data['registrationDeadline']);
+          _eventDate = DateTime.parse(data['eventDate']).toLocal();
+          _deadline = DateTime.parse(data['registrationDeadline']).toLocal();
           _branchController.text = data['branch'] ?? 'Open';
           _categoryController.text = data['category'] ?? 'Other';
           _brochureUrlController.text = data['brochureUrl'] ?? '';
@@ -568,9 +568,14 @@ class _EventDetailScreenState extends State<EventDetailScreen>
 
       await _eventService.createEvent(user.token!, payload);
       if (mounted) {
+        final isCoordinator = user.role == 'coordinator';
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Event published successfully!"),
+          SnackBar(
+            content: Text(
+              isCoordinator 
+                  ? "Event submitted and pending approval!" 
+                  : "Event published successfully!",
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -909,40 +914,45 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                   ),
                   trailing: TextButton(
                     onPressed: () async {
-                      final firstDate = DateTime.now().subtract(const Duration(days: 30));
-                      final lastDate = DateTime.now().add(const Duration(days: 365));
+                      final now = DateTime.now();
+                      final firstDate = DateTime(now.year, now.month, now.day);
+                      final pickerFirstDate = _eventDate.isBefore(firstDate)
+                          ? DateTime(_eventDate.year, _eventDate.month, _eventDate.day)
+                          : firstDate;
+                      final lastDate = pickerFirstDate.add(const Duration(days: 365));
                       DateTime initialDate = _eventDate;
-                      if (initialDate.isBefore(firstDate)) {
-                        initialDate = firstDate;
+                      if (initialDate.isBefore(pickerFirstDate)) {
+                        initialDate = pickerFirstDate;
                       } else if (initialDate.isAfter(lastDate)) {
                         initialDate = lastDate;
                       }
 
+                      debugPrint('[DatePicker] Event: _eventDate=$_eventDate, pickerFirstDate=$pickerFirstDate, lastDate=$lastDate, initialDate=$initialDate');
+
                       final date = await showDatePicker(
                         context: context,
                         initialDate: initialDate,
-                        firstDate: firstDate,
+                        firstDate: pickerFirstDate,
                         lastDate: lastDate,
                       );
                       if (date != null) {
                         if (!mounted) return;
                         final time = await showTimePicker(
                           context: context,
-                          initialTime: TimeOfDay.fromDateTime(_eventDate),
+                          initialTime: TimeOfDay.fromDateTime(_eventDate.toLocal()),
                         );
+                        final newEventDate = DateTime(
+                          date.year,
+                          date.month,
+                          date.day,
+                          time?.hour ?? _eventDate.hour,
+                          time?.minute ?? _eventDate.minute,
+                        );
+                        debugPrint('[DatePicker] Event selected: newEventDate=$newEventDate');
                         setState(() {
-                          _eventDate = DateTime(
-                            date.year,
-                            date.month,
-                            date.day,
-                            time?.hour ?? _eventDate.hour,
-                            time?.minute ?? _eventDate.minute,
-                          );
-                          // If deadline is now after the new event date, adjust deadline
-                          if (_deadline.isAfter(_eventDate)) {
-                            _deadline = _eventDate;
-                          }
+                          _eventDate = newEventDate;
                         });
+                        debugPrint('[DatePicker] Event state updated: _eventDate=$_eventDate, _deadline=$_deadline');
                       }
                     },
                     child: const Text("Select"),
@@ -960,13 +970,13 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                   ),
                   trailing: TextButton(
                     onPressed: () async {
-                      final firstDate = DateTime.now().subtract(const Duration(days: 30));
-                      final lastDate = _eventDate;
+                      final now = DateTime.now();
+                      final today = DateTime(now.year, now.month, now.day);
                       
-                      // Ensure firstDate <= lastDate
-                      final pickerFirstDate = firstDate.isAfter(lastDate)
-                          ? lastDate.subtract(const Duration(minutes: 1))
-                          : firstDate;
+                      final pickerFirstDate = _deadline.isBefore(today)
+                          ? DateTime(_deadline.year, _deadline.month, _deadline.day)
+                          : today;
+                      final lastDate = pickerFirstDate.add(const Duration(days: 365));
                       
                       DateTime initialDate = _deadline;
                       if (initialDate.isBefore(pickerFirstDate)) {
@@ -974,6 +984,8 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                       } else if (initialDate.isAfter(lastDate)) {
                         initialDate = lastDate;
                       }
+
+                      debugPrint('[DatePicker] Deadline: _deadline=$_deadline, _eventDate=$_eventDate, pickerFirstDate=$pickerFirstDate, lastDate=$lastDate, initialDate=$initialDate');
 
                       final date = await showDatePicker(
                         context: context,
@@ -985,17 +997,20 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                         if (!mounted) return;
                         final time = await showTimePicker(
                           context: context,
-                          initialTime: TimeOfDay.fromDateTime(_deadline),
+                          initialTime: TimeOfDay.fromDateTime(_deadline.toLocal()),
                         );
+                        final newDeadline = DateTime(
+                          date.year,
+                          date.month,
+                          date.day,
+                          time?.hour ?? _deadline.hour,
+                          time?.minute ?? _deadline.minute,
+                        );
+                        debugPrint('[DatePicker] Deadline selected: newDeadline=$newDeadline');
                         setState(() {
-                          _deadline = DateTime(
-                            date.year,
-                            date.month,
-                            date.day,
-                            time?.hour ?? _deadline.hour,
-                            time?.minute ?? _deadline.minute,
-                          );
+                          _deadline = newDeadline;
                         });
+                        debugPrint('[DatePicker] Deadline state updated: _deadline=$_deadline');
                       }
                     },
                     child: const Text("Select"),
@@ -1131,6 +1146,48 @@ class _EventDetailScreenState extends State<EventDetailScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (ev['isApproved'] == false) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.orange.withValues(alpha: 0.4), width: 1.2),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.hourglass_empty_rounded, color: Colors.orange, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "PENDING FACULTY APPROVAL",
+                        style: TextStyle(
+                          color: Colors.orange,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        user.role == 'coordinator'
+                            ? "This event is draft-only and hidden from students until a Faculty Admin approves it."
+                            : "Please review the event details below and approve or reject it from your dashboard approvals tab.",
+                        style: TextStyle(
+                          color: Colors.orange.withValues(alpha: 0.9),
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
         Container(
           padding: const EdgeInsets.all(24),
           decoration: AppTheme.cardDecoration(),
@@ -1184,12 +1241,6 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                 final posterUrl = (() {
                   final url1 = ev['posterUrl1']?.toString() ?? '';
                   if (url1.isNotEmpty) return url1;
-                  final url2 = ev['posterUrl2']?.toString() ?? '';
-                  if (url2.isNotEmpty) return url2;
-                  final url3 = ev['posterUrl3']?.toString() ?? '';
-                  if (url3.isNotEmpty) return url3;
-                  final url4 = ev['posterUrl4']?.toString() ?? '';
-                  if (url4.isNotEmpty) return url4;
                   return 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800';
                 })();
 
@@ -1269,11 +1320,9 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                             onTap: () {
                               showDialog(
                                 context: context,
-                                builder: (context) => Dialog(
-                                  backgroundColor: Colors.black.withValues(alpha: 0.9),
-                                  insetPadding: EdgeInsets.zero,
+                                builder: (context) => Dialog.fullscreen(
+                                  backgroundColor: Colors.black.withValues(alpha: 0.95),
                                   child: Stack(
-                                    alignment: Alignment.topRight,
                                     children: [
                                       Positioned.fill(
                                         child: InteractiveViewer(
@@ -1295,14 +1344,15 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                                           ),
                                         ),
                                       ),
-                                      SafeArea(
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(16.0),
+                                      Positioned(
+                                        top: 16,
+                                        right: 16,
+                                        child: SafeArea(
                                           child: IconButton(
                                             icon: const Icon(
                                               Icons.close_rounded,
                                               color: Colors.white,
-                                              size: 32,
+                                              size: 36,
                                             ),
                                             onPressed: () => Navigator.pop(context),
                                           ),
@@ -1329,88 +1379,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                 );
               })(),
 
-              // 3. Other posters (2, 3, 4) thumbnail row
-              (() {
-                final otherPosters = [
-                  ev['posterUrl2'],
-                  ev['posterUrl3'],
-                  ev['posterUrl4'],
-                ].where((url) => url != null && url.toString().isNotEmpty).toList();
-                
-                if (otherPosters.isEmpty) {
-                  return const SizedBox.shrink();
-                }
-                
-                return Container(
-                  height: 60,
-                  margin: const EdgeInsets.only(bottom: 20),
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: otherPosters.length,
-                    itemBuilder: (context, idx) {
-                      final posterUrl = otherPosters[idx].toString();
-                      final isPdf = posterUrl.toLowerCase().endsWith('.pdf');
-                      return GestureDetector(
-                        onTap: () {
-                          showDialog(
-                            context: context,
-                            builder: (context) => Dialog(
-                              backgroundColor: Colors.black.withValues(alpha: 0.9),
-                              insetPadding: EdgeInsets.zero,
-                              child: Stack(
-                                alignment: Alignment.topRight,
-                                children: [
-                                  Positioned.fill(
-                                    child: InteractiveViewer(
-                                      minScale: 0.5,
-                                      maxScale: 4.0,
-                                      child: Center(
-                                        child: isPdf
-                                            ? const Icon(Icons.picture_as_pdf, color: Colors.white, size: 80)
-                                            : Image.network(
-                                                posterUrl,
-                                                fit: BoxFit.contain,
-                                              ),
-                                      ),
-                                    ),
-                                  ),
-                                  SafeArea(
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16.0),
-                                      child: IconButton(
-                                        icon: const Icon(
-                                          Icons.close_rounded,
-                                          color: Colors.white,
-                                          size: 32,
-                                        ),
-                                        onPressed: () => Navigator.pop(context),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          width: 60,
-                          margin: const EdgeInsets.only(right: 12),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(7),
-                            child: isPdf
-                                ? const Icon(Icons.picture_as_pdf, color: Colors.red, size: 24)
-                                : Image.network(posterUrl, fit: BoxFit.cover),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              })(),
+              const SizedBox.shrink(),
 
               // 4. College Name
               Text(
@@ -1458,6 +1427,34 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                         ),
                       ),
                     ],
+                  ],
+                );
+              })(),
+              
+              // More poster of event
+              (() {
+                final u2 = ev['posterUrl2']?.toString() ?? '';
+                final u3 = ev['posterUrl3']?.toString() ?? '';
+                final u4 = ev['posterUrl4']?.toString() ?? '';
+                if (u2.isEmpty && u3.isEmpty && u4.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    const Text(
+                      "More poster of event",
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    if (u2.isNotEmpty) _buildPosterLink("poster url 2", u2),
+                    if (u3.isNotEmpty) _buildPosterLink("poster url 3", u3),
+                    if (u4.isNotEmpty) _buildPosterLink("poster url 4", u4),
                   ],
                 );
               })(),
@@ -1571,6 +1568,52 @@ class _EventDetailScreenState extends State<EventDetailScreen>
         // Registration controls for Student
         if (user.role == 'student') _buildStudentRegistrationBox(user),
       ],
+    );
+  }
+
+  Widget _buildPosterLink(String label, String url) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8.0),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () async {
+          final uri = Uri.parse(url);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          } else {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("Could not open $label")),
+              );
+            }
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.link,
+                size: 18,
+                color: AppTheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppTheme.primary,
+                    fontWeight: FontWeight.bold,
+                    decoration: TextDecoration.underline,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

@@ -909,12 +909,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       if (url != null && url.toString().isNotEmpty) {
                         return url.toString();
                       }
-                      for (int i = 2; i <= 4; i++) {
-                        final u = ev['posterUrl$i'];
-                        if (u != null && u.toString().isNotEmpty) {
-                          return u.toString();
-                        }
-                      }
                       return 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800';
                     })();
 
@@ -993,25 +987,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     ),
                                   ),
                                 ),
-                                // Favorite Button (floating top-right)
+                                // Favorite Button or Pending Approval Badge
                                 Positioned(
                                   top: 12,
                                   right: 12,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.9),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const IconButton(
-                                      icon: Icon(
-                                        Icons.favorite_border_rounded,
-                                        color: Color(0xFF64748B),
-                                        size: 20,
-                                      ),
-                                      onPressed: null,
-                                    ),
+                                  child: ev['isApproved'] == false
+                                      ? Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange.withValues(alpha: 0.9),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: const Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.hourglass_empty_rounded,
+                                                color: Colors.white,
+                                                size: 14,
+                                              ),
+                                              SizedBox(width: 4),
+                                              Text(
+                                                "Pending Approval",
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 10,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      : Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(alpha: 0.9),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const IconButton(
+                                            icon: Icon(
+                                              Icons.favorite_border_rounded,
+                                              color: Color(0xFF64748B),
+                                              size: 20,
+                                            ),
+                                            onPressed: null,
+                                          ),
+                                        ),
                                   ),
-                                ),
                               ],
                             ),
                             // Details Section
@@ -2205,6 +2226,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       itemBuilder: (_, index) {
         final ev = _pendingEventApprovals[index];
         final isDeletion = ev['isPendingDeletion'] == true;
+        final isNewCreation = ev['isApproved'] == false;
         final Map<String, dynamic>? updates = ev['pendingUpdates'] != null
             ? Map<String, dynamic>.from(ev['pendingUpdates'])
             : null;
@@ -2237,13 +2259,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     decoration: BoxDecoration(
                       color: isDeletion
                           ? Colors.red.withValues(alpha: 0.15)
-                          : Colors.orange.withValues(alpha: 0.15),
+                          : (isNewCreation
+                              ? Colors.blue.withValues(alpha: 0.15)
+                              : Colors.orange.withValues(alpha: 0.15)),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      isDeletion ? "PENDING DELETE" : "PENDING UPDATE",
+                      isDeletion 
+                          ? "PENDING DELETE" 
+                          : (isNewCreation ? "PENDING CREATION" : "PENDING UPDATE"),
                       style: TextStyle(
-                        color: isDeletion ? Colors.red : Colors.orange,
+                        color: isDeletion 
+                            ? Colors.red 
+                            : (isNewCreation ? Colors.blue : Colors.orange),
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
@@ -2277,7 +2305,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
                           const SizedBox(width: 6),
                           Text(
-                            isDeletion ? "Deletion Approved" : "Updates Approved",
+                            isDeletion 
+                                ? "Deletion Approved" 
+                                : (isNewCreation ? "Creation Approved" : "Updates Approved"),
                             style: const TextStyle(
                               color: Colors.green,
                               fontWeight: FontWeight.bold,
@@ -2344,8 +2374,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     _approvedIds.add(evId);
                                   });
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Event updates approved!"),
+                                    SnackBar(
+                                      content: Text(
+                                        isNewCreation
+                                            ? "Event creation approved!"
+                                            : "Event updates approved!",
+                                      ),
                                       backgroundColor: Colors.green,
                                     ),
                                   );
@@ -2411,8 +2445,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     _approvedIds.add(evId);
                                   });
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Event updates rejected!"),
+                                    SnackBar(
+                                      content: Text(
+                                        isNewCreation
+                                            ? "Event creation request rejected!"
+                                            : "Event updates rejected!",
+                                      ),
                                       backgroundColor: Colors.green,
                                     ),
                                   );

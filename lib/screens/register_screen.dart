@@ -1,5 +1,5 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
@@ -619,6 +619,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               controller: _phoneController,
                               style: const TextStyle(color: Color(0xFF1E293B)),
                               keyboardType: TextInputType.phone,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                LengthLimitingTextInputFormatter(10),
+                              ],
                               decoration: _lightInputDecoration(
                                 labelText: "Phone Number",
                                 prefixIcon: Icons.phone_outlined,
@@ -626,6 +630,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               validator: (val) {
                                 if (val == null || val.isEmpty) {
                                   return "Please enter your phone number";
+                                }
+                                if (val.length != 10) {
+                                  return "Phone number must be exactly 10 digits";
                                 }
                                 return null;
                               },
@@ -927,12 +934,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                           color: Color(0xFF1E293B),
                                         ),
                                         keyboardType: TextInputType.phone,
+                                        inputFormatters: [
+                                          FilteringTextInputFormatter.digitsOnly,
+                                          LengthLimitingTextInputFormatter(10),
+                                        ],
                                         decoration: _lightInputDecoration(
                                           labelText:
                                               "Business Contact Phone Number (Optional)",
                                           prefixIcon:
                                               Icons.phone_android_outlined,
                                         ),
+                                        validator: (val) {
+                                          if (val != null && val.isNotEmpty && val.length != 10) {
+                                            return "Phone number must be exactly 10 digits";
+                                          }
+                                          return null;
+                                        },
                                       ),
                                       const SizedBox(height: 16),
                                       TextFormField(
