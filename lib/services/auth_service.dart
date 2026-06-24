@@ -1,19 +1,10 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:student_app/config/api_config.dart';
 
 class AuthService {
-  // Use 10.0.2.2 for Android Emulator, localhost for iOS/Web.
-  static String get baseUrl {
-    if (kIsWeb) {
-      final host = Uri.base.host.isEmpty ? "localhost" : Uri.base.host;
-      return "http://$host:5001/api";
-    }
-    return defaultTargetPlatform == TargetPlatform.android
-        ? "http://10.0.2.2:5001/api"
-        : "http://localhost:5001/api";
-  }
+  static String get baseUrl => ApiConfig.baseUrl;
 
   // Login a user
   Future<Map<String, dynamic>> login(String email, String password) async {

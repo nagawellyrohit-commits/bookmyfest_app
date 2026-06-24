@@ -18,7 +18,7 @@ async function runTests() {
   const password = 'Password123';
 
   let studentToken, coordToken, facultyToken, superToken;
-  let studentId, coordId;
+  let studentId, coordId, facultyId;
   let eventId, regId, attendanceId;
 
   // 1. Register Student
@@ -73,6 +73,7 @@ async function runTests() {
       idProofUrl: 'http://example.com/faculty-id.png',
       isFinalYear: false
     });
+    facultyId = res.data.data.user.id;
     logSuccess('Registered faculty admin user (requires verification)');
   } catch (e) {
     return logFail('Faculty registration', e);
@@ -108,12 +109,34 @@ async function runTests() {
     return logFail('Super Admin login', e);
   }
 
-  // 6. Super Admin verifies Coordinator directly
+  // 6. Super Admin verifies Faculty directly
   try {
-    await axios.post(`${API_URL}/auth/coordinators/${coordId}/verify`, {}, {
+    await axios.post(`${API_URL}/auth/faculties/${facultyId}/verify`, {}, {
       headers: { Authorization: `Bearer ${superToken}` }
     });
-    logSuccess('Super Admin verified Coordinator account');
+    logSuccess('Super Admin verified Faculty account');
+  } catch (e) {
+    return logFail('Direct faculty verification', e);
+  }
+
+  // 6b. Login Faculty Admin
+  try {
+    const loginRes = await axios.post(`${API_URL}/auth/login`, {
+      email: facultyEmail,
+      password: password
+    });
+    facultyToken = loginRes.data.data.token;
+    logSuccess('Logged in Faculty Admin');
+  } catch (e) {
+    return logFail('Faculty Admin login', e);
+  }
+
+  // 6c. Faculty Admin verifies Coordinator directly
+  try {
+    await axios.post(`${API_URL}/auth/coordinators/${coordId}/verify`, {}, {
+      headers: { Authorization: `Bearer ${facultyToken}` }
+    });
+    logSuccess('Faculty Admin verified Coordinator account');
   } catch (e) {
     return logFail('Direct coordinator verification', e);
   }
@@ -151,6 +174,32 @@ async function runTests() {
     return logFail('Event creation', e);
   }
 
+  // 8b. Faculty Admin approves the created event
+  try {
+    await axios.post(`${API_URL}/events/${eventId}/approve-update`, {}, {
+      headers: { Authorization: `Bearer ${facultyToken}` }
+    });
+    logSuccess('Faculty Admin approved the Event');
+  } catch (e) {
+    return logFail('Event approval', e);
+  }
+
+  // 8c. Coordinator edits the approved event (proposes a title change)
+  try {
+    const updateRes = await axios.put(`${API_URL}/events/${eventId}`, {
+      title: 'Global AI Summit 2026 - Modified Title'
+    }, {
+      headers: { Authorization: `Bearer ${coordToken}` }
+    });
+    if (updateRes.data.data.pendingUpdates && updateRes.data.data.pendingUpdates.title === 'Global AI Summit 2026 - Modified Title') {
+      logSuccess('Coordinator proposed event edit (stored in pendingUpdates)');
+    } else {
+      throw new Error('Proposed edit was not saved to pendingUpdates correctly');
+    }
+  } catch (e) {
+    return logFail('Coordinator event edit proposal', e);
+  }
+
   // 9. Login Student
   try {
     const loginRes = await axios.post(`${API_URL}/auth/login`, {
@@ -161,6 +210,44 @@ async function runTests() {
     logSuccess('Logged in Student');
   } catch (e) {
     return logFail('Student login', e);
+  }
+
+  // 9b. Student fetches event and verifies the old title is still shown (edit is pending)
+  try {
+    const eventRes = await axios.get(`${API_URL}/events/${eventId}`, {
+      headers: { Authorization: `Bearer ${studentToken}` }
+    });
+    if (eventRes.data.data.title === 'Global AI Summit 2026') {
+      logSuccess('Verified: Student still sees the old title (pending edit is hidden)');
+    } else {
+      throw new Error(`Student saw the unapproved title: ${eventRes.data.data.title}`);
+    }
+  } catch (e) {
+    return logFail('Verify pending edit hidden from student', e);
+  }
+
+  // 9c. Faculty Admin approves the pending updates
+  try {
+    await axios.post(`${API_URL}/events/${eventId}/approve-update`, {}, {
+      headers: { Authorization: `Bearer ${facultyToken}` }
+    });
+    logSuccess('Faculty Admin approved the pending event edits');
+  } catch (e) {
+    return logFail('Faculty Admin approve pending updates', e);
+  }
+
+  // 9d. Student fetches event again and verifies the new title is now visible
+  try {
+    const eventRes = await axios.get(`${API_URL}/events/${eventId}`, {
+      headers: { Authorization: `Bearer ${studentToken}` }
+    });
+    if (eventRes.data.data.title === 'Global AI Summit 2026 - Modified Title') {
+      logSuccess('Verified: Student now sees the approved modified title');
+    } else {
+      throw new Error(`Student did not see the approved title: ${eventRes.data.data.title}`);
+    }
+  } catch (e) {
+    return logFail('Verify approved edit visible to student', e);
   }
 
   // 10. Student registers for Event (Paid, status: pending)

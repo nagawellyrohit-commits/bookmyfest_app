@@ -1,17 +1,9 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:student_app/config/api_config.dart';
 
 class EventService {
-  static String get baseUrl {
-    if (kIsWeb) {
-      final host = Uri.base.host.isEmpty ? "localhost" : Uri.base.host;
-      return "http://$host:5001/api";
-    }
-    return defaultTargetPlatform == TargetPlatform.android
-        ? "http://10.0.2.2:5001/api"
-        : "http://localhost:5001/api";
-  }
+  static String get baseUrl => ApiConfig.baseUrl;
 
   // Helpers to get request headers
   Map<String, String> _headers(String token) => {
