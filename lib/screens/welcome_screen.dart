@@ -276,170 +276,183 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                     ),
                                   ),
 
-                                  if (_sponsors.isNotEmpty) ...[
-                                    const SizedBox(height: 48),
-                                    const Text(
-                                      "Our Event Co-Partners",
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF64748B),
-                                        letterSpacing: 0.8,
+                                  SizedBox(height: isSmallScreen ? 60 : 100),
+
+                                  // 2. Action Button area (placed higher up)
+                                  AnimatedBuilder(
+                                    animation: Listenable.merge([
+                                      _controller,
+                                      _shakeController,
+                                      _zoomController,
+                                    ]),
+                                    builder: (context, child) {
+                                      final val = _buttonScaleAnimation.value;
+                                      final zoomScale =
+                                          _zoomScaleAnimation.value;
+                                      final zoomOpacity =
+                                          _zoomOpacityAnimation.value;
+                                      final shakeVal = _shakeAnimation.value;
+
+                                      return Transform.scale(
+                                        scale: val * zoomScale,
+                                        child: Opacity(
+                                          opacity:
+                                              (val.clamp(0.0, 1.0) *
+                                                      zoomOpacity)
+                                                  .clamp(0.0, 1.0),
+                                          child: Transform.translate(
+                                            offset: Offset(shakeVal * 5.0, 0.0),
+                                            child: Transform.rotate(
+                                              angle: shakeVal * 0.02,
+                                              child: child,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 32,
+                                        vertical: isSmallScreen ? 12 : 18,
+                                      ),
+                                      child: Container(
+                                        width: double.infinity,
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              _brandColor,
+                                              _brandColor.withValues(
+                                                alpha: 0.8,
+                                              ),
+                                            ],
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            18,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: _brandColor.withValues(
+                                                alpha: 0.4,
+                                              ),
+                                              blurRadius: 15,
+                                              offset: const Offset(0, 6),
+                                            ),
+                                          ],
+                                        ),
+                                        child: ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent,
+                                            shadowColor: Colors.transparent,
+                                            elevation: 0,
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 18,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(18),
+                                            ),
+                                          ),
+                                          onPressed: () async {
+                                            if (_isNavigating ||
+                                                !_controller.isCompleted) {
+                                              return;
+                                            }
+
+                                            setState(() {
+                                              _isNavigating = true;
+                                            });
+
+                                            // Stop shake immediately and reset to center
+                                            _shakeController.stop();
+                                            _shakeController.reset();
+
+                                            // Play zoom scale-up and fade-out animation
+                                            await _zoomController.forward();
+
+                                            if (!context.mounted) return;
+
+                                            // Navigate to SelectLoginScreen
+                                            await Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    SelectLoginScreen(
+                                                      brandColor: _brandColor,
+                                                      instituteName:
+                                                          _instituteName,
+                                                    ),
+                                              ),
+                                            );
+
+                                            // Once returned from SelectLoginScreen:
+                                            // Reset zoom, reset navigation state, and restart shake
+                                            _zoomController.reset();
+                                            setState(() {
+                                              _isNavigating = false;
+                                            });
+                                            _shakeController.repeat();
+                                          },
+                                          child: AnimatedBuilder(
+                                            animation: _textCharCountAnimation,
+                                            builder: (context, child) {
+                                              final count =
+                                                  _textCharCountAnimation.value;
+                                              final visibleText = "Get Started"
+                                                  .substring(0, count);
+                                              return Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Text(
+                                                    visibleText,
+                                                    style: const TextStyle(
+                                                      fontSize: 18,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  ScaleTransition(
+                                                    scale: _iconPopAnimation,
+                                                    child: const Icon(
+                                                      Icons.arrow_forward,
+                                                      color: Colors.white,
+                                                      size: 20,
+                                                    ),
+                                                  ),
+                                                ],
+                                              );
+                                            },
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    _SponsorshipMarquee(sponsors: _sponsors),
-                                  ],
+                                  ),
                                   const SizedBox(height: 12),
                                 ],
                               ),
                             ),
 
-                            // 2. Action Button area (placed higher up to clear background icons)
-                            AnimatedBuilder(
-                              animation: Listenable.merge([
-                                _controller,
-                                _shakeController,
-                                _zoomController,
-                              ]),
-                              builder: (context, child) {
-                                final val = _buttonScaleAnimation.value;
-                                final zoomScale = _zoomScaleAnimation.value;
-                                final zoomOpacity = _zoomOpacityAnimation.value;
-                                final shakeVal = _shakeAnimation.value;
-
-                                return Transform.scale(
-                                  scale: val * zoomScale,
-                                  child: Opacity(
-                                    opacity: (val.clamp(0.0, 1.0) * zoomOpacity)
-                                        .clamp(0.0, 1.0),
-                                    child: Transform.translate(
-                                      offset: Offset(shakeVal * 5.0, 0.0),
-                                      child: Transform.rotate(
-                                        angle: shakeVal * 0.02,
-                                        child: child,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 32,
-                                  vertical: isSmallScreen ? 12 : 18,
-                                ),
-                                child: Container(
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        _brandColor,
-                                        _brandColor.withValues(alpha: 0.8),
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    borderRadius: BorderRadius.circular(18),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: _brandColor.withValues(
-                                          alpha: 0.4,
-                                        ),
-                                        blurRadius: 15,
-                                        offset: const Offset(0, 6),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
-                                      shadowColor: Colors.transparent,
-                                      elevation: 0,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 18,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(18),
-                                      ),
-                                    ),
-                                    onPressed: () async {
-                                      if (_isNavigating ||
-                                          !_controller.isCompleted) {
-                                        return;
-                                      }
-
-                                      setState(() {
-                                        _isNavigating = true;
-                                      });
-
-                                      // Stop shake immediately and reset to center
-                                      _shakeController.stop();
-                                      _shakeController.reset();
-
-                                      // Play zoom scale-up and fade-out animation
-                                      await _zoomController.forward();
-
-                                      if (!context.mounted) return;
-
-                                      // Navigate to SelectLoginScreen
-                                      await Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              SelectLoginScreen(
-                                                brandColor: _brandColor,
-                                                instituteName: _instituteName,
-                                              ),
-                                        ),
-                                      );
-
-                                      // Once returned from SelectLoginScreen:
-                                      // Reset zoom, reset navigation state, and restart shake
-                                      _zoomController.reset();
-                                      setState(() {
-                                        _isNavigating = false;
-                                      });
-                                      _shakeController.repeat();
-                                    },
-                                    child: AnimatedBuilder(
-                                      animation: _textCharCountAnimation,
-                                      builder: (context, child) {
-                                        final count =
-                                            _textCharCountAnimation.value;
-                                        final visibleText = "Get Started"
-                                            .substring(0, count);
-                                        return Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              visibleText,
-                                              style: const TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            ScaleTransition(
-                                              scale: _iconPopAnimation,
-                                              child: const Icon(
-                                                Icons.arrow_forward,
-                                                color: Colors.white,
-                                                size: 20,
-                                              ),
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    ),
-                                  ),
+                            if (_sponsors.isNotEmpty) ...[
+                              const SizedBox(height: 16),
+                              const Text(
+                                "Sponsored by",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF64748B),
+                                  letterSpacing: 0.8,
                                 ),
                               ),
-                            ),
+                              const SizedBox(height: 4),
+                              _SponsorshipMarquee(sponsors: _sponsors),
+                            ],
 
-                            // Bottom spacer to ensure the Get Started button sits cleanly above the background icons
-                            SizedBox(height: isSmallScreen ? 70 : 95),
+                            // Bottom spacer to ensure the sponsor marquee sits cleanly above the background icons
+                            SizedBox(height: isSmallScreen ? 90 : 125),
                           ],
                         ),
                       ),

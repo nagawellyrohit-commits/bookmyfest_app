@@ -109,7 +109,7 @@ class _SelectLoginScreenState extends State<SelectLoginScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 30),
+                const SizedBox(height: 80),
                 // Heading: "Select Login"
                 const Text(
                   "Select Login",
@@ -120,224 +120,217 @@ class _SelectLoginScreenState extends State<SelectLoginScreen>
                     color: Color(0xFF0F172A), // Dark Slate
                   ),
                 ),
-                const SizedBox(height: 20),
+                const Spacer(),
 
                 // Grid/Stack Layout centered
-                Expanded(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxHeight: 380,
-                        maxWidth: 360,
-                      ),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          double W = 300;
-                          double H = 300;
-                          double centerSize = 108;
-                          double centerRadius = centerSize / 2;
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxHeight: 380,
+                      maxWidth: 360,
+                    ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        double W = 300;
+                        double H = 300;
+                        double centerSize = 108;
+                        double centerRadius = centerSize / 2;
 
-                          return Stack(
-                            alignment: Alignment.center,
-                            clipBehavior: Clip.none,
-                            children: [
-                              // Staggered entry animation for the main grid panel
-                              AnimatedBuilder(
-                                animation: _animations[0],
-                                builder: (context, child) {
-                                  final val = _animations[0].value;
-                                  final scale = 0.85 + (val * 0.15);
-                                  final slideY = (1.0 - val) * 60.0;
-                                  return Transform(
-                                    transform:
-                                        Matrix4.translationValues(
-                                          0.0,
-                                          slideY,
-                                          0.0,
-                                        ) *
-                                        Matrix4.diagonal3Values(
-                                          scale,
-                                          scale,
-                                          1.0,
-                                        ),
-                                    alignment: Alignment.center,
-                                    child: Opacity(
-                                      opacity: val.clamp(0.0, 1.0),
-                                      child: child,
-                                    ),
-                                  );
-                                },
-                                child: Container(
-                                  width: W,
-                                  height: H,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(32),
-                                    border: Border.all(
-                                      color: appBarColor,
-                                      width: 2.0,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.04,
-                                        ),
-                                        blurRadius: 15,
-                                        offset: const Offset(0, 6),
+                        return Stack(
+                          alignment: Alignment.center,
+                          clipBehavior: Clip.none,
+                          children: [
+                            // Staggered entry animation for the main grid panel
+                            AnimatedBuilder(
+                              animation: _animations[0],
+                              builder: (context, child) {
+                                final val = _animations[0].value;
+                                final scale = 0.85 + (val * 0.15);
+                                final slideY = (1.0 - val) * 60.0;
+                                return Transform(
+                                  transform:
+                                      Matrix4.translationValues(
+                                        0.0,
+                                        slideY,
+                                        0.0,
+                                      ) *
+                                      Matrix4.diagonal3Values(
+                                        scale,
+                                        scale,
+                                        1.0,
                                       ),
-                                    ],
+                                  alignment: Alignment.center,
+                                  child: Opacity(
+                                    opacity: val.clamp(0.0, 1.0),
+                                    child: child,
                                   ),
-                                  child: Stack(
-                                    children: [
-                                      // 1. Grid Lines
-                                      Positioned.fill(
-                                        child: CustomPaint(
-                                          painter: GridLinesPainter(
-                                            color: appBarColor,
-                                            centerRadius: centerRadius,
-                                          ),
-                                        ),
-                                      ),
-
-                                      // 2. Quadrants
-                                      // Top-Left: Faculty
-                                      Positioned(
-                                        left: 0,
-                                        top: 0,
-                                        width: W / 2,
-                                        height: H / 2,
-                                        child: _buildQuadrant(
-                                          context,
-                                          title: "Faculty",
-                                          iconData:
-                                              Icons.person_outline_rounded,
-                                          iconColor: appBarColor,
-                                          alignment: const Alignment(
-                                            -0.2,
-                                            -0.2,
-                                          ),
-                                          borderRadius: const BorderRadius.only(
-                                            topLeft: Radius.circular(30),
-                                          ),
-                                          onTap: () => Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => LoginScreen(
-                                                selectedRole:
-                                                    _getRoleParamValue(
-                                                      "Faculty",
-                                                    ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-
-                                      // Top-Right: Coordinator
-                                      Positioned(
-                                        left: W / 2,
-                                        top: 0,
-                                        width: W / 2,
-                                        height: H / 2,
-                                        child: _buildQuadrant(
-                                          context,
-                                          title: "Coordinator",
-                                          iconData: Icons.groups_outlined,
-                                          iconColor: appBarColor,
-                                          alignment: const Alignment(0.2, -0.2),
-                                          borderRadius: const BorderRadius.only(
-                                            topRight: Radius.circular(30),
-                                          ),
-                                          onTap: () => Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => LoginScreen(
-                                                selectedRole:
-                                                    _getRoleParamValue(
-                                                      "Coordinator",
-                                                    ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-
-                                      // Bottom-Left: Guest
-                                      Positioned(
-                                        left: 0,
-                                        top: H / 2,
-                                        width: W / 2,
-                                        height: H / 2,
-                                        child: _buildQuadrant(
-                                          context,
-                                          title: "Guest",
-                                          iconData: Icons.visibility_outlined,
-                                          iconColor: appBarColor,
-                                          alignment: const Alignment(-0.2, 0.2),
-                                          borderRadius: const BorderRadius.only(
-                                            bottomLeft: Radius.circular(30),
-                                          ),
-                                          onTap: () => Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => LoginScreen(
-                                                selectedRole:
-                                                    _getRoleParamValue("Guest"),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-
-                                      // Bottom-Right: Super Admin
-                                      Positioned(
-                                        left: W / 2,
-                                        top: H / 2,
-                                        width: W / 2,
-                                        height: H / 2,
-                                        child: _buildQuadrant(
-                                          context,
-                                          title: "Super Admin",
-                                          iconData:
-                                              Icons.manage_accounts_outlined,
-                                          iconColor: appBarColor,
-                                          alignment: const Alignment(0.2, 0.2),
-                                          borderRadius: const BorderRadius.only(
-                                            bottomRight: Radius.circular(30),
-                                          ),
-                                          onTap: () => Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => LoginScreen(
-                                                selectedRole:
-                                                    _getRoleParamValue(
-                                                      "Super Admin",
-                                                    ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                );
+                              },
+                              child: Container(
+                                width: W,
+                                height: H,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(32),
+                                  border: Border.all(
+                                    color: appBarColor,
+                                    width: 2.0,
                                   ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.04,
+                                      ),
+                                      blurRadius: 15,
+                                      offset: const Offset(0, 6),
+                                    ),
+                                  ],
+                                ),
+                                child: Stack(
+                                  children: [
+                                    // 1. Grid Lines
+                                    Positioned.fill(
+                                      child: CustomPaint(
+                                        painter: GridLinesPainter(
+                                          color: appBarColor,
+                                          centerRadius: centerRadius,
+                                        ),
+                                      ),
+                                    ),
+
+                                    // 2. Quadrants
+                                    // Top-Left: Faculty
+                                    Positioned(
+                                      left: 0,
+                                      top: 0,
+                                      width: W / 2,
+                                      height: H / 2,
+                                      child: _buildQuadrant(
+                                        context,
+                                        title: "Faculty",
+                                        iconData: Icons.person_outline_rounded,
+                                        iconColor: appBarColor,
+                                        alignment: const Alignment(-0.2, -0.2),
+                                        borderRadius: const BorderRadius.only(
+                                          topLeft: Radius.circular(30),
+                                        ),
+                                        onTap: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => LoginScreen(
+                                              selectedRole: _getRoleParamValue(
+                                                "Faculty",
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
+                                    // Top-Right: Coordinator
+                                    Positioned(
+                                      left: W / 2,
+                                      top: 0,
+                                      width: W / 2,
+                                      height: H / 2,
+                                      child: _buildQuadrant(
+                                        context,
+                                        title: "Coordinator",
+                                        iconData: Icons.groups_outlined,
+                                        iconColor: appBarColor,
+                                        alignment: const Alignment(0.2, -0.2),
+                                        borderRadius: const BorderRadius.only(
+                                          topRight: Radius.circular(30),
+                                        ),
+                                        onTap: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => LoginScreen(
+                                              selectedRole: _getRoleParamValue(
+                                                "Coordinator",
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
+                                    // Bottom-Left: Guest
+                                    Positioned(
+                                      left: 0,
+                                      top: H / 2,
+                                      width: W / 2,
+                                      height: H / 2,
+                                      child: _buildQuadrant(
+                                        context,
+                                        title: "Guest",
+                                        iconData: Icons.visibility_outlined,
+                                        iconColor: appBarColor,
+                                        alignment: const Alignment(-0.2, 0.2),
+                                        borderRadius: const BorderRadius.only(
+                                          bottomLeft: Radius.circular(30),
+                                        ),
+                                        onTap: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => LoginScreen(
+                                              selectedRole: _getRoleParamValue(
+                                                "Guest",
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
+                                    // Bottom-Right: Super Admin
+                                    Positioned(
+                                      left: W / 2,
+                                      top: H / 2,
+                                      width: W / 2,
+                                      height: H / 2,
+                                      child: _buildQuadrant(
+                                        context,
+                                        title: "Super Admin",
+                                        iconData:
+                                            Icons.manage_accounts_outlined,
+                                        iconColor: appBarColor,
+                                        alignment: const Alignment(0.2, 0.2),
+                                        borderRadius: const BorderRadius.only(
+                                          bottomRight: Radius.circular(30),
+                                        ),
+                                        onTap: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => LoginScreen(
+                                              selectedRole: _getRoleParamValue(
+                                                "Super Admin",
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
+                            ),
 
-                              // 3. Center Circular Card: Student
-                              _buildCenterCard(
-                                context,
-                                title: "Student",
-                                iconData: Icons.badge_outlined,
-                                iconColor: appBarColor,
-                                size: centerSize,
-                              ),
-                            ],
-                          );
-                        },
-                      ),
+                            // 3. Center Circular Card: Student
+                            _buildCenterCard(
+                              context,
+                              title: "Student",
+                              iconData: Icons.badge_outlined,
+                              iconColor: appBarColor,
+                              size: centerSize,
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ),
+                const Spacer(),
 
                 // Small footer text
                 Padding(

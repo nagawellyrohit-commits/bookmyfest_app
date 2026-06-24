@@ -132,17 +132,26 @@ class _EventDetailScreenState extends State<EventDetailScreen>
               ),
               const SizedBox(height: 8),
               ListTile(
-                leading: const Icon(Icons.camera_alt_outlined, color: AppTheme.primary),
+                leading: const Icon(
+                  Icons.camera_alt_outlined,
+                  color: AppTheme.primary,
+                ),
                 title: const Text('Click Photo (Camera)'),
                 onTap: () => Navigator.pop(context, 'camera'),
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library_outlined, color: AppTheme.primary),
+                leading: const Icon(
+                  Icons.photo_library_outlined,
+                  color: AppTheme.primary,
+                ),
                 title: const Text('Upload from Gallery'),
                 onTap: () => Navigator.pop(context, 'gallery'),
               ),
               ListTile(
-                leading: const Icon(Icons.picture_as_pdf_outlined, color: AppTheme.primary),
+                leading: const Icon(
+                  Icons.picture_as_pdf_outlined,
+                  color: AppTheme.primary,
+                ),
                 title: const Text('Upload PDF Document'),
                 onTap: () => Navigator.pop(context, 'pdf'),
               ),
@@ -315,8 +324,18 @@ class _EventDetailScreenState extends State<EventDetailScreen>
     try {
       final dt = DateTime.parse(dateStr).toLocal();
       final months = [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun", 
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
       ];
       final hour = dt.hour == 0 ? 12 : (dt.hour > 12 ? dt.hour - 12 : dt.hour);
       final ampm = dt.hour >= 12 ? "PM" : "AM";
@@ -572,8 +591,8 @@ class _EventDetailScreenState extends State<EventDetailScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              isCoordinator 
-                  ? "Event submitted and pending approval!" 
+              isCoordinator
+                  ? "Event submitted and pending approval!"
                   : "Event published successfully!",
             ),
             backgroundColor: Colors.green,
@@ -706,10 +725,10 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                     child: CircularProgressIndicator(color: AppTheme.primary),
                   )
                 : widget.isCreateMode
-                    ? _buildEventForm(isEditMode: false)
-                    : _isEditing
-                        ? _buildEventForm(isEditMode: true)
-                        : _buildEventDetails(user),
+                ? _buildEventForm(isEditMode: false)
+                : _isEditing
+                ? _buildEventForm(isEditMode: true)
+                : _buildEventDetails(user),
           ),
         ],
       ),
@@ -763,7 +782,8 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                 TextField(
                   controller: _categoryController,
                   decoration: AppTheme.inputDecoration(
-                    labelText: "Event Category (e.g. Football, Cricket, Hackathon)",
+                    labelText:
+                        "Event Category (e.g. Football, Cricket, Hackathon)",
                     prefixIcon: Icons.category_outlined,
                   ),
                 ),
@@ -917,9 +937,15 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                       final now = DateTime.now();
                       final firstDate = DateTime(now.year, now.month, now.day);
                       final pickerFirstDate = _eventDate.isBefore(firstDate)
-                          ? DateTime(_eventDate.year, _eventDate.month, _eventDate.day)
+                          ? DateTime(
+                              _eventDate.year,
+                              _eventDate.month,
+                              _eventDate.day,
+                            )
                           : firstDate;
-                      final lastDate = pickerFirstDate.add(const Duration(days: 365));
+                      final lastDate = pickerFirstDate.add(
+                        const Duration(days: 365),
+                      );
                       DateTime initialDate = _eventDate;
                       if (initialDate.isBefore(pickerFirstDate)) {
                         initialDate = pickerFirstDate;
@@ -927,7 +953,9 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                         initialDate = lastDate;
                       }
 
-                      debugPrint('[DatePicker] Event: _eventDate=$_eventDate, pickerFirstDate=$pickerFirstDate, lastDate=$lastDate, initialDate=$initialDate');
+                      debugPrint(
+                        '[DatePicker] Event: _eventDate=$_eventDate, pickerFirstDate=$pickerFirstDate, lastDate=$lastDate, initialDate=$initialDate',
+                      );
 
                       final date = await showDatePicker(
                         context: context,
@@ -939,7 +967,9 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                         if (!mounted) return;
                         final time = await showTimePicker(
                           context: context,
-                          initialTime: TimeOfDay.fromDateTime(_eventDate.toLocal()),
+                          initialTime: TimeOfDay.fromDateTime(
+                            _eventDate.toLocal(),
+                          ),
                         );
                         final newEventDate = DateTime(
                           date.year,
@@ -948,11 +978,15 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                           time?.hour ?? _eventDate.hour,
                           time?.minute ?? _eventDate.minute,
                         );
-                        debugPrint('[DatePicker] Event selected: newEventDate=$newEventDate');
+                        debugPrint(
+                          '[DatePicker] Event selected: newEventDate=$newEventDate',
+                        );
                         setState(() {
                           _eventDate = newEventDate;
                         });
-                        debugPrint('[DatePicker] Event state updated: _eventDate=$_eventDate, _deadline=$_deadline');
+                        debugPrint(
+                          '[DatePicker] Event state updated: _eventDate=$_eventDate, _deadline=$_deadline',
+                        );
                       }
                     },
                     child: const Text("Select"),
@@ -972,12 +1006,18 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                     onPressed: () async {
                       final now = DateTime.now();
                       final today = DateTime(now.year, now.month, now.day);
-                      
+
                       final pickerFirstDate = _deadline.isBefore(today)
-                          ? DateTime(_deadline.year, _deadline.month, _deadline.day)
+                          ? DateTime(
+                              _deadline.year,
+                              _deadline.month,
+                              _deadline.day,
+                            )
                           : today;
-                      final lastDate = pickerFirstDate.add(const Duration(days: 365));
-                      
+                      final lastDate = pickerFirstDate.add(
+                        const Duration(days: 365),
+                      );
+
                       DateTime initialDate = _deadline;
                       if (initialDate.isBefore(pickerFirstDate)) {
                         initialDate = pickerFirstDate;
@@ -985,7 +1025,9 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                         initialDate = lastDate;
                       }
 
-                      debugPrint('[DatePicker] Deadline: _deadline=$_deadline, _eventDate=$_eventDate, pickerFirstDate=$pickerFirstDate, lastDate=$lastDate, initialDate=$initialDate');
+                      debugPrint(
+                        '[DatePicker] Deadline: _deadline=$_deadline, _eventDate=$_eventDate, pickerFirstDate=$pickerFirstDate, lastDate=$lastDate, initialDate=$initialDate',
+                      );
 
                       final date = await showDatePicker(
                         context: context,
@@ -997,7 +1039,9 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                         if (!mounted) return;
                         final time = await showTimePicker(
                           context: context,
-                          initialTime: TimeOfDay.fromDateTime(_deadline.toLocal()),
+                          initialTime: TimeOfDay.fromDateTime(
+                            _deadline.toLocal(),
+                          ),
                         );
                         final newDeadline = DateTime(
                           date.year,
@@ -1006,11 +1050,15 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                           time?.hour ?? _deadline.hour,
                           time?.minute ?? _deadline.minute,
                         );
-                        debugPrint('[DatePicker] Deadline selected: newDeadline=$newDeadline');
+                        debugPrint(
+                          '[DatePicker] Deadline selected: newDeadline=$newDeadline',
+                        );
                         setState(() {
                           _deadline = newDeadline;
                         });
-                        debugPrint('[DatePicker] Deadline state updated: _deadline=$_deadline');
+                        debugPrint(
+                          '[DatePicker] Deadline state updated: _deadline=$_deadline',
+                        );
                       }
                     },
                     child: const Text("Select"),
@@ -1152,11 +1200,18 @@ class _EventDetailScreenState extends State<EventDetailScreen>
             decoration: BoxDecoration(
               color: Colors.orange.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.orange.withValues(alpha: 0.4), width: 1.2),
+              border: Border.all(
+                color: Colors.orange.withValues(alpha: 0.4),
+                width: 1.2,
+              ),
             ),
             child: Row(
               children: [
-                const Icon(Icons.hourglass_empty_rounded, color: Colors.orange, size: 20),
+                const Icon(
+                  Icons.hourglass_empty_rounded,
+                  color: Colors.orange,
+                  size: 20,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -1250,7 +1305,9 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                   margin: const EdgeInsets.only(bottom: 20),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+                    border: Border.all(
+                      color: Colors.black.withValues(alpha: 0.05),
+                    ),
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(15),
@@ -1272,18 +1329,29 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                                       onTap: () async {
                                         final uri = Uri.parse(posterUrl);
                                         if (await canLaunchUrl(uri)) {
-                                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                          await launchUrl(
+                                            uri,
+                                            mode:
+                                                LaunchMode.externalApplication,
+                                          );
                                         } else {
                                           if (mounted) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(content: Text("Could not open PDF URL")),
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  "Could not open PDF URL",
+                                                ),
+                                              ),
                                             );
                                           }
                                         }
                                       },
                                       child: const Center(
                                         child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
                                           children: [
                                             Icon(
                                               Icons.picture_as_pdf_rounded,
@@ -1321,7 +1389,9 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                               showDialog(
                                 context: context,
                                 builder: (context) => Dialog.fullscreen(
-                                  backgroundColor: Colors.black.withValues(alpha: 0.95),
+                                  backgroundColor: Colors.black.withValues(
+                                    alpha: 0.95,
+                                  ),
                                   child: Stack(
                                     children: [
                                       Positioned.fill(
@@ -1332,14 +1402,20 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                                             child: Image.network(
                                               posterUrl,
                                               fit: BoxFit.contain,
-                                              errorBuilder: (context, error, stackTrace) => Container(
-                                                color: Colors.black,
-                                                child: const Icon(
-                                                  Icons.image_not_supported_outlined,
-                                                  color: Colors.white,
-                                                  size: 80,
-                                                ),
-                                              ),
+                                              errorBuilder:
+                                                  (
+                                                    context,
+                                                    error,
+                                                    stackTrace,
+                                                  ) => Container(
+                                                    color: Colors.black,
+                                                    child: const Icon(
+                                                      Icons
+                                                          .image_not_supported_outlined,
+                                                      color: Colors.white,
+                                                      size: 80,
+                                                    ),
+                                                  ),
                                             ),
                                           ),
                                         ),
@@ -1354,7 +1430,8 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                                               color: Colors.white,
                                               size: 36,
                                             ),
-                                            onPressed: () => Navigator.pop(context),
+                                            onPressed: () =>
+                                                Navigator.pop(context),
                                           ),
                                         ),
                                       ),
@@ -1365,13 +1442,108 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                             },
                             child: AspectRatio(
                               aspectRatio: 16 / 10,
-                              child: Image.network(
-                                posterUrl,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => Image.network(
-                                  'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800',
-                                  fit: BoxFit.cover,
-                                ),
+                              child: Stack(
+                                children: [
+                                  Positioned.fill(
+                                    child: Image.network(
+                                      posterUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (
+                                            context,
+                                            error,
+                                            stackTrace,
+                                          ) => Image.network(
+                                            'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800',
+                                            fit: BoxFit.cover,
+                                          ),
+                                    ),
+                                  ),
+                                  Positioned.fill(
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topRight,
+                                          end: Alignment.bottomLeft,
+                                          colors: [
+                                            Colors.black.withValues(
+                                              alpha: 0.35,
+                                            ),
+                                            Colors.transparent,
+                                            Colors.black.withValues(
+                                              alpha: 0.35,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 12,
+                                    right: 12,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.5,
+                                        ),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.3,
+                                          ),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: const Icon(
+                                        Icons.fullscreen_rounded,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    bottom: 12,
+                                    right: 12,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.5,
+                                        ),
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.2,
+                                          ),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.zoom_in_rounded,
+                                            color: Colors.white,
+                                            size: 14,
+                                          ),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            'Tap to view',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -1394,7 +1566,8 @@ class _EventDetailScreenState extends State<EventDetailScreen>
 
               // 5. Description
               (() {
-                final descriptionText = ev['description']?.toString() ?? 'No description provided.';
+                final descriptionText =
+                    ev['description']?.toString() ?? 'No description provided.';
                 final shouldTruncate = descriptionText.length > 120;
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1430,7 +1603,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                   ],
                 );
               })(),
-              
+
               // More poster of event
               (() {
                 final u2 = ev['posterUrl2']?.toString() ?? '';
@@ -1582,9 +1755,9 @@ class _EventDetailScreenState extends State<EventDetailScreen>
             await launchUrl(uri, mode: LaunchMode.externalApplication);
           } else {
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Could not open $label")),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text("Could not open $label")));
             }
           }
         },
@@ -1593,11 +1766,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                Icons.link,
-                size: 18,
-                color: AppTheme.primary,
-              ),
+              const Icon(Icons.link, size: 18, color: AppTheme.primary),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
@@ -2074,140 +2243,142 @@ class _EventDetailScreenState extends State<EventDetailScreen>
               final status = reg['paymentStatus'];
               final isPending = status == 'pending';
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          decoration: AppTheme.cardDecoration(),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: AppTheme.cardDecoration(),
+                child: Row(
                   children: [
-                    Text(
-                      studentName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            studentName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            "Type: ${reg['registrationType']}",
+                            style: const TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                          if (reg['user']?['college']?['name'] != null)
+                            Text(
+                              "College: ${reg['user']['college']['name']}",
+                              style: const TextStyle(
+                                color: AppTheme.textSecondary,
+                                fontSize: 12,
+                              ),
+                            ),
+                          if (reg['user']?['phone'] != null)
+                            Text(
+                              "Phone: ${reg['user']['phone']}",
+                              style: const TextStyle(
+                                color: AppTheme.textSecondary,
+                                fontSize: 12,
+                              ),
+                            ),
+                          if (user.role != 'coordinator') ...[
+                            if (reg['user']?['email'] != null)
+                              Text(
+                                "Email: ${reg['user']['email']}",
+                                style: const TextStyle(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            if (reg['user']?['department'] != null)
+                              Text(
+                                "Dept: ${reg['user']['department']}",
+                                style: const TextStyle(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                          ],
+                          if (reg['paymentReference'] != null)
+                            Text(
+                              "Ref: ${reg['paymentReference']}",
+                              style: const TextStyle(
+                                color: Colors.blue,
+                                fontSize: 12,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                    Text(
-                      "Type: ${reg['registrationType']}",
-                      style: const TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: 12,
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isPending
+                                ? Colors.amber.withValues(alpha: 0.15)
+                                : Colors.green.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            status.toString().toUpperCase(),
+                            style: TextStyle(
+                              color: isPending ? Colors.amber : Colors.green,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        if (isPending) ...[
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: () async {
+                              try {
+                                await _eventService.confirmPayment(
+                                  user.token!,
+                                  _event!['id'],
+                                  reg['id'],
+                                );
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Payment confirmed!"),
+                                  ),
+                                );
+                                _fetchDetails();
+                              } catch (e) {
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text("Error: $e")),
+                                );
+                              }
+                            },
+                            child: const Text(
+                              "Approve",
+                              style: TextStyle(
+                                color: AppTheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    if (reg['user']?['college']?['name'] != null)
-                      Text(
-                        "College: ${reg['user']['college']['name']}",
-                        style: const TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 12,
-                        ),
-                      ),
-                    if (reg['user']?['phone'] != null)
-                      Text(
-                        "Phone: ${reg['user']['phone']}",
-                        style: const TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 12,
-                        ),
-                      ),
-                    if (user.role != 'coordinator') ...[
-                      if (reg['user']?['email'] != null)
-                        Text(
-                          "Email: ${reg['user']['email']}",
-                          style: const TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 12,
-                          ),
-                        ),
-                      if (reg['user']?['department'] != null)
-                        Text(
-                          "Dept: ${reg['user']['department']}",
-                          style: const TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 12,
-                          ),
-                        ),
-                    ],
-                    if (reg['paymentReference'] != null)
-                      Text(
-                        "Ref: ${reg['paymentReference']}",
-                        style: const TextStyle(
-                          color: Colors.blue,
-                          fontSize: 12,
-                        ),
-                      ),
                   ],
                 ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isPending
-                          ? Colors.amber.withValues(alpha: 0.15)
-                          : Colors.green.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      status.toString().toUpperCase(),
-                      style: TextStyle(
-                        color: isPending ? Colors.amber : Colors.green,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  if (isPending) ...[
-                    const SizedBox(height: 8),
-                    TextButton(
-                      onPressed: () async {
-                        try {
-                          await _eventService.confirmPayment(
-                            user.token!,
-                            _event!['id'],
-                            reg['id'],
-                          );
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Payment confirmed!")),
-                          );
-                          _fetchDetails();
-                        } catch (e) {
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(
-                            context,
-                          ).showSnackBar(SnackBar(content: Text("Error: $e")));
-                        }
-                      },
-                      child: const Text(
-                        "Approve",
-                        style: TextStyle(
-                          color: AppTheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ],
+              );
+            },
           ),
-        );
-      },
-    ),
-  ),
-],
-);
-}
+        ),
+      ],
+    );
+  }
 
   // 4. Coordinator Attendance Log Tab
   Widget _buildAttendanceTab(UserProvider user) {
