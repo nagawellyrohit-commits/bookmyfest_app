@@ -849,7 +849,9 @@ export const uploadFile = (req, res, next) => {
       console.log('[Cloudinary upload] Uploading resume to Cloudinary:', req.file.path);
       const result = await cloudinary.uploader.upload(req.file.path, {
         folder: 'resumes',
-        resource_type: 'auto'
+        resource_type: 'raw',
+        use_filename: true,
+        unique_filename: true
       });
 
       console.log('[Cloudinary upload success] Secure URL:', result.secure_url);
