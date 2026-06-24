@@ -5,6 +5,10 @@ import { sendEmailNotification, sendWhatsAppNotification } from '../utils/notifi
 import multer from 'multer';
 import path from 'path';
 import { createWorker } from 'tesseract.js';
+import fs from 'fs';
+import axios from 'axios';
+import cloudinary from '../config/cloudinary.js';
+
 
 const resetCodes = new Map();
 
@@ -54,15 +58,18 @@ export const register = async (req, res, next) => {
 
       if (role === 'student' || role === 'coordinator') {
         let localPath = null;
-        if (
-          idProofUrl === 'http://example.com/student-id.png' ||
-          idProofUrl === 'http://example.com/coord-id.png' ||
-          idProofUrl.includes('test-ocr-bypass')
-        ) {
+        let isCloudinary = idProofUrl.includes('cloudinary.com') || idProofUrl.includes('res.cloudinary.com');
+        let bypassOcr = idProofUrl === 'http://example.com/student-id.png' ||
+                        idProofUrl === 'http://example.com/coord-id.png' ||
+                        idProofUrl.includes('test-ocr-bypass');
+
+        if (bypassOcr) {
           console.log('[OCR Verification] Bypassing OCR validation for test/mock URL:', idProofUrl);
         } else if (idProofUrl.includes('/uploads/')) {
           const filename = idProofUrl.split('/uploads/')[1];
           localPath = path.join('uploads', filename);
+        } else if (isCloudinary) {
+          console.log('[OCR Verification] Processing Cloudinary URL for OCR:', idProofUrl);
         } else {
           return res.status(400).json({
             success: false,
@@ -70,20 +77,33 @@ export const register = async (req, res, next) => {
           });
         }
 
-        if (localPath) {
+        if (!bypassOcr) {
           try {
-            console.log(`[OCR Verification] Performing OCR on local file: ${localPath}`);
-            const ocrText = await performOcr(localPath);
-            console.log('[OCR Verification] Extracted Text:', ocrText);
-
-            const isMatched = verifyOcrMatch(ocrText, fullName, collegeName, department);
-            if (!isMatched) {
-              return res.status(400).json({
-                success: false,
-                message: 'Student College ID and details are not matched'
-              });
+            let ocrInput;
+            if (isCloudinary) {
+              console.log(`[OCR Verification] Downloading Cloudinary image for OCR: ${idProofUrl}`);
+              const response = await axios.get(idProofUrl, { responseType: 'arraybuffer' });
+              ocrInput = Buffer.from(response.data);
+            } else if (localPath) {
+              console.log(`[OCR Verification] Performing OCR on local file: ${localPath}`);
+              ocrInput = localPath;
             }
-            console.log('[OCR Verification] Success! Matched.');
+
+            if (ocrInput) {
+              const ocrText = await performOcr(ocrInput);
+              console.log('[OCR Verification] Extracted Text:', ocrText);
+
+              const isMatched = verifyOcrMatch(ocrText, fullName, collegeName, department);
+              if (!isMatched) {
+                return res.status(400).json({
+                  success: false,
+                  message: 'Student College ID and details are not matched'
+                });
+              }
+              console.log('[OCR Verification] Success! Matched.');
+            } else {
+              throw new Error('No input file or buffer resolved for OCR.');
+            }
           } catch (ocrErr) {
             console.error('[OCR Error during registration]:', ocrErr);
             return res.status(400).json({
@@ -802,7 +822,7 @@ const upload = multer({
 
 // Export uploadFile controller
 export const uploadFile = (req, res, next) => {
-  upload(req, res, (err) => {
+  upload(req, res, async (err) => {
     if (err) {
       console.error('[Multer upload error]:', err);
     }
@@ -823,16 +843,39 @@ export const uploadFile = (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Please select a PDF file to upload.' });
     }
 
-    console.log('[Multer upload success] Saved file:', req.file.filename);
-    // Dynamic host-based static link resolution
-    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    console.log('[Multer upload success] Saved local temp file:', req.file.filename);
 
-    res.status(200).json({
-      success: true,
-      message: 'PDF CV uploaded successfully',
-      fileUrl: fileUrl,
-      fileName: req.file.originalname
-    });
+    try {
+      console.log('[Cloudinary upload] Uploading resume to Cloudinary:', req.file.path);
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: 'resumes',
+        resource_type: 'auto'
+      });
+
+      console.log('[Cloudinary upload success] Secure URL:', result.secure_url);
+
+      // Clean up local temp file asynchronously
+      fs.promises.unlink(req.file.path).catch((unlinkErr) => {
+        console.error('[Cleanup Error] Failed to delete local temp file:', req.file.path, unlinkErr);
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'PDF CV uploaded successfully',
+        fileUrl: result.secure_url,
+        fileName: req.file.originalname
+      });
+    } catch (uploadErr) {
+      console.error('[Cloudinary upload error]:', uploadErr);
+      
+      // Cleanup local temp file
+      fs.promises.unlink(req.file.path).catch(() => {});
+
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to upload PDF CV to Cloudinary. Please check Cloudinary configuration.'
+      });
+    }
   });
 };
 
@@ -859,7 +902,7 @@ const uploadImageMulter = multer({
 }).single('file');
 
 export const uploadImage = (req, res, next) => {
-  uploadImageMulter(req, res, (err) => {
+  uploadImageMulter(req, res, async (err) => {
     if (err) {
       console.error('[Multer image upload error]:', err);
     }
@@ -880,15 +923,39 @@ export const uploadImage = (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Please select an image file to upload.' });
     }
 
-    console.log('[Multer image upload success] Saved file:', req.file.filename);
-    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    console.log('[Multer image upload success] Saved local temp file:', req.file.filename);
 
-    res.status(200).json({
-      success: true,
-      message: 'ID Proof Image uploaded successfully',
-      fileUrl: fileUrl,
-      fileName: req.file.originalname
-    });
+    try {
+      console.log('[Cloudinary upload] Uploading image to Cloudinary:', req.file.path);
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: 'images',
+        resource_type: 'image'
+      });
+
+      console.log('[Cloudinary upload success] Secure URL:', result.secure_url);
+
+      // Clean up local temp file asynchronously
+      fs.promises.unlink(req.file.path).catch((unlinkErr) => {
+        console.error('[Cleanup Error] Failed to delete local temp file:', req.file.path, unlinkErr);
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Image uploaded successfully',
+        fileUrl: result.secure_url,
+        fileName: req.file.originalname
+      });
+    } catch (uploadErr) {
+      console.error('[Cloudinary upload error]:', uploadErr);
+      
+      // Cleanup local temp file
+      fs.promises.unlink(req.file.path).catch(() => {});
+
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to upload image to Cloudinary. Please check Cloudinary configuration.'
+      });
+    }
   });
 };
 
