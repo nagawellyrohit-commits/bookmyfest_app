@@ -316,7 +316,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         "Sep",
         "Oct",
         "Nov",
-        "Dec"
+        "Dec",
       ];
       return "${months[dt.month - 1]} ${dt.day}";
     } catch (_) {
@@ -332,7 +332,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         (role == 'faculty_admin' || role == 'coordinator') && !user.isVerified;
 
     // Clamping index to prevent out-of-bounds errors on role transitions/hot-reload
-    final expectedLength = role == 'super_admin' ? 5 : (role == 'guest' ? 2 : 3);
+    final expectedLength = role == 'super_admin'
+        ? 5
+        : (role == 'guest' ? 2 : 3);
     if (_currentIndex >= expectedLength) {
       _currentIndex = 0;
     }
@@ -341,18 +343,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         title: const Text(
           "bookmyfest",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         actions: [
           if (role == 'super_admin')
             IconButton(
-              icon: const Icon(
-                Icons.business_rounded,
-                color: Colors.white,
-              ),
+              icon: const Icon(Icons.business_rounded, color: Colors.white),
               tooltip: "Manage Sponsors",
               onPressed: () {
                 Navigator.push(
@@ -532,11 +528,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      icon,
-                      size: 60,
-                      color: AppTheme.textSecondary,
-                    ),
+                    Icon(icon, size: 60, color: AppTheme.textSecondary),
                     const SizedBox(height: 16),
                     Text(
                       message,
@@ -914,10 +906,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                     final category = ev['category']?.toString() ?? 'General';
                     final title = ev['title']?.toString() ?? 'Event';
-                    final college = ev['college']?['name']?.toString() ?? 'Campus';
-                    final eventDateStr = ev['eventDate'] != null ? _formatEventDate(ev['eventDate'].toString()) : 'TBD';
+                    final college =
+                        ev['college']?['name']?.toString() ?? 'Campus';
+                    final eventDateStr = ev['eventDate'] != null
+                        ? _formatEventDate(ev['eventDate'].toString())
+                        : 'TBD';
                     final isPaid = ev['isPaid'] ?? false;
-                    final entryFeeDouble = double.tryParse(ev['entryFee']?.toString() ?? '') ?? 0.0;
+                    final entryFeeDouble =
+                        double.tryParse(ev['entryFee']?.toString() ?? '') ??
+                        0.0;
 
                     return GestureDetector(
                       onTap: () async {
@@ -954,16 +951,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             Stack(
                               children: [
                                 ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                                  borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(24),
+                                  ),
                                   child: AspectRatio(
                                     aspectRatio: 16 / 9,
                                     child: Image.network(
                                       imageUrl,
                                       fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) => Image.network(
-                                        'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800',
-                                        fit: BoxFit.cover,
-                                      ),
+                                      errorBuilder:
+                                          (
+                                            context,
+                                            error,
+                                            stackTrace,
+                                          ) => Image.network(
+                                            'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800',
+                                            fit: BoxFit.cover,
+                                          ),
                                     ),
                                   ),
                                 ),
@@ -972,9 +976,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   top: 16,
                                   left: 16,
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 6,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.9),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.9,
+                                      ),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
@@ -987,51 +996,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     ),
                                   ),
                                 ),
-                                // Favorite Button or Pending Approval Badge
-                                Positioned(
-                                  top: 12,
-                                  right: 12,
-                                  child: ev['isApproved'] == false
-                                      ? Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                          decoration: BoxDecoration(
-                                            color: Colors.orange.withValues(alpha: 0.9),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: const Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                Icons.hourglass_empty_rounded,
-                                                color: Colors.white,
-                                                size: 14,
-                                              ),
-                                              SizedBox(width: 4),
-                                              Text(
-                                                "Pending Approval",
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 10,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        )
-                                      : Container(
-                                          decoration: BoxDecoration(
-                                            color: Colors.white.withValues(alpha: 0.9),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: const IconButton(
-                                            icon: Icon(
-                                              Icons.favorite_border_rounded,
-                                              color: Color(0xFF64748B),
-                                              size: 20,
-                                            ),
-                                            onPressed: null,
-                                          ),
+                                // Pending Approval Badge
+                                if (ev['isApproved'] == false)
+                                  Positioned(
+                                    top: 12,
+                                    right: 12,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 5,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange.withValues(
+                                          alpha: 0.9,
                                         ),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.hourglass_empty_rounded,
+                                            color: Colors.white,
+                                            size: 14,
+                                          ),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            "Pending Approval",
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 10,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
                               ],
                             ),
@@ -1114,10 +1114,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       const SizedBox(width: 4),
                                       Expanded(
                                         child: Text(
-                                          _getCountdownText(ev['registrationDeadline']),
+                                          _getCountdownText(
+                                            ev['registrationDeadline'],
+                                          ),
                                           overflow: TextOverflow.ellipsis,
                                           style: TextStyle(
-                                            color: isClosed ? AppTheme.accent : AppTheme.primary,
+                                            color: isClosed
+                                                ? AppTheme.accent
+                                                : AppTheme.primary,
                                             fontSize: 13,
                                             fontWeight: FontWeight.w600,
                                           ),
@@ -1128,15 +1132,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   const SizedBox(height: 16),
                                   // Bottom Row with Price and Book Now button
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       // Price
                                       Text(
-                                        isPaid ? "₹${entryFeeDouble.toStringAsFixed(0)}" : "Free",
+                                        isPaid
+                                            ? "₹${entryFeeDouble.toStringAsFixed(0)}"
+                                            : "Free",
                                         style: TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.w900,
-                                          color: isPaid ? AppTheme.accent : const Color(0xFF10B981),
+                                          color: isPaid
+                                              ? AppTheme.accent
+                                              : const Color(0xFF10B981),
                                         ),
                                       ),
                                       // Book Now / Register button
@@ -1145,10 +1154,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                           final result = await Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (context) => EventDetailScreen(
-                                                eventId: ev['id'],
-                                                isCreateMode: false,
-                                              ),
+                                              builder: (context) =>
+                                                  EventDetailScreen(
+                                                    eventId: ev['id'],
+                                                    isCreateMode: false,
+                                                  ),
                                             ),
                                           );
                                           if (result == true) {
@@ -1163,13 +1173,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             vertical: 12,
                                           ),
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
                                           ),
                                           elevation: 0,
                                         ),
                                         child: Text(
                                           isStudentView
-                                              ? (role == 'guest' ? "View Details" : "Book Now")
+                                              ? (role == 'guest'
+                                                    ? "View Details"
+                                                    : "Book Now")
                                               : "Manage & Audit",
                                           style: const TextStyle(
                                             fontSize: 13,
@@ -1204,7 +1218,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return _buildEmptyStatePlaceholder(
         icon: Icons.confirmation_num_rounded,
         message: "My Event Passes",
-        description: "Select an event in the Browse tab to register and unlock your ticket and attendance tracking.",
+        description:
+            "Select an event in the Browse tab to register and unlock your ticket and attendance tracking.",
       );
     }
 
@@ -1411,33 +1426,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 24),
                 if (user.role != 'guest')
                   ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
-                    minimumSize: const Size.fromHeight(50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  icon: const Icon(Icons.edit_outlined, color: Colors.white),
-                  label: const Text(
-                    "Edit Profile",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  onPressed: () async {
-                    final updated = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const EditProfileScreen(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      minimumSize: const Size.fromHeight(50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                    );
-                    if (updated == true) {
-                      _fetchDashboardData();
-                    }
-                  },
-                ),
+                    ),
+                    icon: const Icon(Icons.edit_outlined, color: Colors.white),
+                    label: const Text(
+                      "Edit Profile",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    onPressed: () async {
+                      final updated = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const EditProfileScreen(),
+                        ),
+                      );
+                      if (updated == true) {
+                        _fetchDashboardData();
+                      }
+                    },
+                  ),
               ],
             ),
           ),
@@ -1489,7 +1504,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return _buildEmptyStatePlaceholder(
         icon: Icons.payments_rounded,
         message: "No Pending Payments",
-        description: "All payments for your college events have been verified and confirmed.",
+        description:
+            "All payments for your college events have been verified and confirmed.",
       );
     }
 
@@ -1556,7 +1572,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   return const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
+                      Icon(
+                        Icons.check_circle_rounded,
+                        color: Colors.green,
+                        size: 20,
+                      ),
                       SizedBox(width: 4),
                       Text(
                         "Approved",
@@ -1574,7 +1594,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     height: 24,
                     child: CircularProgressIndicator(
                       strokeWidth: 2.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppTheme.primary,
+                      ),
                     ),
                   );
                 } else {
@@ -1789,10 +1811,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
+                          const Icon(
+                            Icons.check_circle_rounded,
+                            color: Colors.green,
+                            size: 20,
+                          ),
                           const SizedBox(width: 6),
                           Text(
-                            isDeletionPending ? "Deletion Approved" : "Approved",
+                            isDeletionPending
+                                ? "Deletion Approved"
+                                : "Approved",
                             style: const TextStyle(
                               color: Colors.green,
                               fontWeight: FontWeight.bold,
@@ -1812,7 +1840,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         height: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.5,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppTheme.primary,
+                          ),
                         ),
                       ),
                     ),
@@ -1894,11 +1924,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                                 actions: [
                                   TextButton(
-                                    onPressed: () => Navigator.pop(context, false),
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
                                     child: const Text("Cancel"),
                                   ),
                                   TextButton(
-                                    onPressed: () => Navigator.pop(context, true),
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
                                     child: Text(
                                       isDeletionPending
                                           ? "Delete Account"
@@ -2087,21 +2119,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
               _profileDetailItem(
                 Icons.business_center_outlined,
                 "Company Name",
-                (businessName != null && businessName.toString().trim().isNotEmpty)
+                (businessName != null &&
+                        businessName.toString().trim().isNotEmpty)
                     ? businessName.toString().trim()
                     : 'N/A',
               ),
               _profileDetailItem(
                 Icons.description_outlined,
                 "Description",
-                (description != null && description.toString().trim().isNotEmpty)
+                (description != null &&
+                        description.toString().trim().isNotEmpty)
                     ? description.toString().trim()
                     : 'N/A',
               ),
               _profileDetailItem(
                 Icons.phone_android_outlined,
                 "Business Phone",
-                (contactPhone != null && contactPhone.toString().trim().isNotEmpty)
+                (contactPhone != null &&
+                        contactPhone.toString().trim().isNotEmpty)
                     ? contactPhone.toString().trim()
                     : 'N/A',
               ),
@@ -2122,10 +2157,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 (websiteUrl != null && websiteUrl.toString().trim().isNotEmpty)
                     ? websiteUrl.toString().trim()
                     : 'N/A',
-                color: (websiteUrl != null && websiteUrl.toString().trim().isNotEmpty)
+                color:
+                    (websiteUrl != null &&
+                        websiteUrl.toString().trim().isNotEmpty)
                     ? Colors.blue
                     : AppTheme.textSecondary,
-                onTap: (websiteUrl != null && websiteUrl.toString().trim().isNotEmpty)
+                onTap:
+                    (websiteUrl != null &&
+                        websiteUrl.toString().trim().isNotEmpty)
                     ? () async {
                         final url = Uri.parse(websiteUrl.toString().trim());
                         if (await canLaunchUrl(url)) {
@@ -2140,13 +2179,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
               _profileDetailItem(
                 Icons.camera_alt_outlined,
                 "Instagram",
-                (instagramUrl != null && instagramUrl.toString().trim().isNotEmpty)
+                (instagramUrl != null &&
+                        instagramUrl.toString().trim().isNotEmpty)
                     ? instagramUrl.toString().trim()
                     : 'N/A',
-                color: (instagramUrl != null && instagramUrl.toString().trim().isNotEmpty)
+                color:
+                    (instagramUrl != null &&
+                        instagramUrl.toString().trim().isNotEmpty)
                     ? Colors.pinkAccent
                     : AppTheme.textSecondary,
-                onTap: (instagramUrl != null && instagramUrl.toString().trim().isNotEmpty)
+                onTap:
+                    (instagramUrl != null &&
+                        instagramUrl.toString().trim().isNotEmpty)
                     ? () async {
                         final url = Uri.parse(instagramUrl.toString().trim());
                         if (await canLaunchUrl(url)) {
@@ -2161,13 +2205,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
               _profileDetailItem(
                 Icons.link_outlined,
                 "LinkedIn",
-                (linkedinUrl != null && linkedinUrl.toString().trim().isNotEmpty)
+                (linkedinUrl != null &&
+                        linkedinUrl.toString().trim().isNotEmpty)
                     ? linkedinUrl.toString().trim()
                     : 'N/A',
-                color: (linkedinUrl != null && linkedinUrl.toString().trim().isNotEmpty)
+                color:
+                    (linkedinUrl != null &&
+                        linkedinUrl.toString().trim().isNotEmpty)
                     ? Colors.blueAccent
                     : AppTheme.textSecondary,
-                onTap: (linkedinUrl != null && linkedinUrl.toString().trim().isNotEmpty)
+                onTap:
+                    (linkedinUrl != null &&
+                        linkedinUrl.toString().trim().isNotEmpty)
                     ? () async {
                         final url = Uri.parse(linkedinUrl.toString().trim());
                         if (await canLaunchUrl(url)) {
@@ -2251,32 +2300,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isDeletion
-                          ? Colors.red.withValues(alpha: 0.15)
-                          : (isNewCreation
-                              ? Colors.blue.withValues(alpha: 0.15)
-                              : Colors.orange.withValues(alpha: 0.15)),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      isDeletion 
-                          ? "PENDING DELETE" 
-                          : (isNewCreation ? "PENDING CREATION" : "PENDING UPDATE"),
-                      style: TextStyle(
-                        color: isDeletion 
-                            ? Colors.red 
-                            : (isNewCreation ? Colors.blue : Colors.orange),
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
+                  (() {
+                    final hasRejection = ev['rejectionReason'] != null;
+                    final hasEdits = updates != null;
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
                       ),
-                    ),
-                  ),
+                      decoration: BoxDecoration(
+                        color: hasRejection
+                            ? (hasEdits
+                                ? Colors.purple.withValues(alpha: 0.15)
+                                : Colors.red.withValues(alpha: 0.15))
+                            : (isDeletion
+                                ? Colors.red.withValues(alpha: 0.15)
+                                : (isNewCreation
+                                      ? Colors.blue.withValues(alpha: 0.15)
+                                      : Colors.orange.withValues(alpha: 0.15))),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        hasRejection
+                            ? (hasEdits ? "EDITED" : "REJECTED")
+                            : (isDeletion
+                                ? "PENDING DELETE"
+                                : (isNewCreation
+                                      ? "PENDING CREATION"
+                                      : "PENDING UPDATE")),
+                        style: TextStyle(
+                          color: hasRejection
+                              ? (hasEdits ? Colors.purple : Colors.red)
+                              : (isDeletion
+                                  ? Colors.red
+                                  : (isNewCreation ? Colors.blue : Colors.orange)),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    );
+                  })(),
                 ],
               ),
               const SizedBox(height: 12),
@@ -2294,6 +2357,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 final String evId = ev['id'];
                 final bool isApproved = _approvedIds.contains(evId);
                 final bool isProcessing = _processingIds.contains(evId);
+                final hasRejection = ev['rejectionReason'] != null;
+                final hasEdits = updates != null;
 
                 if (isApproved) {
                   return Center(
@@ -2302,12 +2367,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
+                          const Icon(
+                            Icons.check_circle_rounded,
+                            color: Colors.green,
+                            size: 20,
+                          ),
                           const SizedBox(width: 6),
                           Text(
-                            isDeletion 
-                                ? "Deletion Approved" 
-                                : (isNewCreation ? "Creation Approved" : "Updates Approved"),
+                            isDeletion
+                                ? "Deletion Approved"
+                                : (isNewCreation
+                                      ? "Creation Approved"
+                                      : "Updates Approved"),
                             style: const TextStyle(
                               color: Colors.green,
                               fontWeight: FontWeight.bold,
@@ -2327,152 +2398,385 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         height: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.5,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppTheme.primary,
+                          ),
                         ),
                       ),
                     ),
                   );
-                } else {
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          onPressed: () async {
-                            setState(() {
-                              _processingIds.add(evId);
-                            });
-                            try {
-                              if (isDeletion) {
-                                await _eventService.approveEventDelete(
-                                  user.token!,
-                                  evId,
-                                );
-                                if (mounted) {
-                                  setState(() {
-                                    _processingIds.remove(evId);
-                                    _approvedIds.add(evId);
-                                  });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Event deletion approved!"),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
-                                }
-                              } else {
-                                await _eventService.approveEventUpdate(
-                                  user.token!,
-                                  evId,
-                                );
-                                if (mounted) {
-                                  setState(() {
-                                    _processingIds.remove(evId);
-                                    _approvedIds.add(evId);
-                                  });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        isNewCreation
-                                            ? "Event creation approved!"
-                                            : "Event updates approved!",
-                                      ),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
-                                }
-                              }
-                              _fetchDashboardData(silent: true);
-                            } catch (e) {
-                              if (mounted) {
-                                setState(() {
-                                  _processingIds.remove(evId);
-                                });
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text("Error: $e"),
-                                    backgroundColor: AppTheme.accent,
-                                  ),
-                                );
-                              }
-                            }
-                          },
-                          child: const Text("Approve"),
-                        ),
+                } else if (hasRejection && !hasEdits) {
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.red.withValues(alpha: 0.3),
+                        width: 1.2,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.accent,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          onPressed: () async {
-                            setState(() {
-                              _processingIds.add(evId);
-                            });
-                            try {
-                              if (isDeletion) {
-                                await _eventService.rejectEventDelete(
-                                  user.token!,
-                                  evId,
-                                );
-                                if (mounted) {
-                                  setState(() {
-                                    _processingIds.remove(evId);
-                                    _approvedIds.add(evId);
-                                  });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        "Event deletion request rejected!",
-                                      ),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
-                                }
-                              } else {
-                                await _eventService.rejectEventUpdate(
-                                  user.token!,
-                                  evId,
-                                );
-                                if (mounted) {
-                                  setState(() {
-                                    _processingIds.remove(evId);
-                                    _approvedIds.add(evId);
-                                  });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        isNewCreation
-                                            ? "Event creation request rejected!"
-                                            : "Event updates rejected!",
-                                      ),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
-                                }
-                              }
-                              _fetchDashboardData(silent: true);
-                            } catch (e) {
-                              if (mounted) {
-                                setState(() {
-                                  _processingIds.remove(evId);
-                                });
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text("Error: $e"),
-                                    backgroundColor: AppTheme.accent,
-                                  ),
-                                );
-                              }
-                            }
-                          },
-                          child: const Text("Reject"),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.cancel_rounded,
+                          color: Colors.redAccent,
+                          size: 20,
                         ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Event Rejected / Modifications Requested",
+                                style: TextStyle(
+                                  color: Colors.redAccent,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                "Rejection Reason: ${ev['rejectionReason']}",
+                                style: const TextStyle(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 12,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                } else {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (hasRejection && hasEdits) ...[
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.purple.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.purple.withValues(alpha: 0.3),
+                              width: 1.2,
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(
+                                Icons.info_outline_rounded,
+                                color: Colors.purple,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      "Modifications Resubmitted",
+                                      style: TextStyle(
+                                        color: Colors.purple,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      "Previous feedback: ${ev['rejectionReason']}",
+                                      style: const TextStyle(
+                                        color: AppTheme.textSecondary,
+                                        fontSize: 12,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primary,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              onPressed: () async {
+                                setState(() {
+                                  _processingIds.add(evId);
+                                });
+                                try {
+                                  if (isDeletion) {
+                                    await _eventService.approveEventDelete(
+                                      user.token!,
+                                      evId,
+                                    );
+                                    if (mounted) {
+                                      setState(() {
+                                        _processingIds.remove(evId);
+                                        _approvedIds.add(evId);
+                                      });
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("Event deletion approved!"),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    }
+                                  } else {
+                                    await _eventService.approveEventUpdate(
+                                      user.token!,
+                                      evId,
+                                    );
+                                    if (mounted) {
+                                      setState(() {
+                                        _processingIds.remove(evId);
+                                        _approvedIds.add(evId);
+                                      });
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            isNewCreation
+                                                ? "Event creation approved!"
+                                                : "Event updates approved!",
+                                          ),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                  _fetchDashboardData(silent: true);
+                                } catch (e) {
+                                  if (mounted) {
+                                    setState(() {
+                                      _processingIds.remove(evId);
+                                    });
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text("Error: $e"),
+                                        backgroundColor: AppTheme.accent,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                              child: const Text("Approve"),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.accent,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              onPressed: () async {
+                                String? reason;
+                                if (!isDeletion) {
+                                  reason = await showDialog<String>(
+                                    context: context,
+                                    builder: (context) {
+                                      final controller = TextEditingController();
+                                      final formKey = GlobalKey<FormState>();
+                                      return AlertDialog(
+                                        backgroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        title: Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.rate_review_rounded,
+                                              color: AppTheme.primary,
+                                            ),
+                                            const SizedBox(width: 10),
+                                            const Text(
+                                              "Rejection Feedback",
+                                              style: TextStyle(
+                                                color: Color(0xFF0F172A),
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 20,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        content: Form(
+                                          key: formKey,
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              const Text(
+                                                "Please specify the reason for rejecting or the modifications requested:",
+                                                style: TextStyle(
+                                                  color: Color(0xFF475569),
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 16),
+                                              TextFormField(
+                                                controller: controller,
+                                                maxLines: 4,
+                                                style: const TextStyle(
+                                                  color: Color(0xFF0F172A),
+                                                  fontSize: 14,
+                                                ),
+                                                decoration: InputDecoration(
+                                                  hintText: "E.g., Please upload a clearer poster image or update the description.",
+                                                  hintStyle: TextStyle(
+                                                    color: Colors.grey.shade400,
+                                                    fontSize: 13,
+                                                  ),
+                                                  filled: true,
+                                                  fillColor: Colors.grey.shade50,
+                                                  border: OutlineInputBorder(
+                                                    borderRadius: BorderRadius.circular(12),
+                                                    borderSide: BorderSide(
+                                                      color: Colors.grey.shade300,
+                                                    ),
+                                                  ),
+                                                  enabledBorder: OutlineInputBorder(
+                                                    borderRadius: BorderRadius.circular(12),
+                                                    borderSide: BorderSide(
+                                                      color: Colors.grey.shade200,
+                                                    ),
+                                                  ),
+                                                  focusedBorder: OutlineInputBorder(
+                                                    borderRadius: BorderRadius.circular(12),
+                                                    borderSide: BorderSide(
+                                                      color: AppTheme.primary,
+                                                      width: 1.5,
+                                                    ),
+                                                  ),
+                                                ),
+                                                validator: (val) {
+                                                  if (val == null || val.trim().isEmpty) {
+                                                    return "Rejection reason is required";
+                                                  }
+                                                  return null;
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context),
+                                            child: Text(
+                                              "Cancel",
+                                              style: TextStyle(
+                                                color: Colors.grey.shade600,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: AppTheme.accent,
+                                              foregroundColor: Colors.white,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 16,
+                                                vertical: 10,
+                                              ),
+                                            ),
+                                            onPressed: () {
+                                              if (formKey.currentState!.validate()) {
+                                                Navigator.pop(
+                                                  context,
+                                                  controller.text.trim(),
+                                                );
+                                              }
+                                            },
+                                            child: const Text("Confirm Reject"),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                  if (reason == null) return;
+                                }
+
+                                setState(() {
+                                  _processingIds.add(evId);
+                                });
+                                try {
+                                  if (isDeletion) {
+                                    await _eventService.rejectEventDelete(
+                                      user.token!,
+                                      evId,
+                                    );
+                                    if (mounted) {
+                                      setState(() {
+                                        _processingIds.remove(evId);
+                                        _approvedIds.add(evId);
+                                      });
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            "Event deletion request rejected!",
+                                          ),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    }
+                                  } else {
+                                    await _eventService.rejectEventUpdate(
+                                      user.token!,
+                                      evId,
+                                      reason: reason,
+                                    );
+                                    if (mounted) {
+                                      setState(() {
+                                        _processingIds.remove(evId);
+                                        _approvedIds.add(evId);
+                                      });
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            isNewCreation
+                                                ? "Event creation request rejected and reason saved!"
+                                                : "Event updates rejected and reason saved!",
+                                          ),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                  _fetchDashboardData(silent: true);
+                                } catch (e) {
+                                  if (mounted) {
+                                    setState(() {
+                                      _processingIds.remove(evId);
+                                    });
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text("Error: $e"),
+                                        backgroundColor: AppTheme.accent,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                              child: const Text("Reject"),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   );
@@ -2511,7 +2815,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           suffixIcon: hasEdits
               ? Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   margin: const EdgeInsets.only(right: 8),
                   decoration: BoxDecoration(
                     color: AppTheme.accent.withValues(alpha: 0.15),
@@ -2528,10 +2835,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 )
               : null,
           filled: true,
-          fillColor: hasEdits 
-              ? AppTheme.accent.withValues(alpha: 0.02) 
+          fillColor: hasEdits
+              ? AppTheme.accent.withValues(alpha: 0.02)
               : Colors.grey.withValues(alpha: 0.05),
-          contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 10,
+            horizontal: 12,
+          ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(
@@ -2552,19 +2862,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildApprovalForm(Map<String, dynamic> ev, Map<String, dynamic>? updates) {
-    final originalEventDate = ev['eventDate'] != null 
-        ? DateTime.parse(ev['eventDate'].toString()).toLocal().toString().substring(0, 16) 
+  Widget _buildApprovalForm(
+    Map<String, dynamic> ev,
+    Map<String, dynamic>? updates,
+  ) {
+    final originalEventDate = ev['eventDate'] != null
+        ? DateTime.parse(
+            ev['eventDate'].toString(),
+          ).toLocal().toString().substring(0, 16)
         : 'N/A';
-    final proposedEventDate = updates?['eventDate'] != null 
-        ? DateTime.parse(updates!['eventDate'].toString()).toLocal().toString().substring(0, 16) 
+    final proposedEventDate = updates?['eventDate'] != null
+        ? DateTime.parse(
+            updates!['eventDate'].toString(),
+          ).toLocal().toString().substring(0, 16)
         : null;
 
-    final originalDeadline = ev['registrationDeadline'] != null 
-        ? DateTime.parse(ev['registrationDeadline'].toString()).toLocal().toString().substring(0, 16) 
+    final originalDeadline = ev['registrationDeadline'] != null
+        ? DateTime.parse(
+            ev['registrationDeadline'].toString(),
+          ).toLocal().toString().substring(0, 16)
         : 'N/A';
-    final proposedDeadline = updates?['registrationDeadline'] != null 
-        ? DateTime.parse(updates!['registrationDeadline'].toString()).toLocal().toString().substring(0, 16) 
+    final proposedDeadline = updates?['registrationDeadline'] != null
+        ? DateTime.parse(
+            updates!['registrationDeadline'].toString(),
+          ).toLocal().toString().substring(0, 16)
         : null;
 
     return Column(
@@ -2615,10 +2936,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _buildApprovalField(
           label: "Event Type",
           icon: Icons.group_work_outlined,
-          originalValue: ev['eventType']?.toString().toUpperCase() ?? 'INDIVIDUAL',
+          originalValue:
+              ev['eventType']?.toString().toUpperCase() ?? 'INDIVIDUAL',
           proposedValue: updates?['eventType']?.toString().toUpperCase(),
         ),
-        if (ev['eventType'] == 'group' || ev['eventType'] == 'both' || updates?['eventType'] == 'group' || updates?['eventType'] == 'both') ...[
+        if (ev['eventType'] == 'group' ||
+            ev['eventType'] == 'both' ||
+            updates?['eventType'] == 'group' ||
+            updates?['eventType'] == 'both') ...[
           _buildApprovalField(
             label: "Min Members",
             icon: Icons.person_outline,
@@ -2648,7 +2973,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           label: "Payment Status",
           icon: Icons.currency_rupee,
           originalValue: ev['isPaid'] == true ? 'Paid' : 'Free',
-          proposedValue: updates?['isPaid'] != null ? (updates!['isPaid'] == true ? 'Paid' : 'Free') : null,
+          proposedValue: updates?['isPaid'] != null
+              ? (updates!['isPaid'] == true ? 'Paid' : 'Free')
+              : null,
         ),
         if (ev['isPaid'] == true || updates?['isPaid'] == true) ...[
           _buildApprovalField(

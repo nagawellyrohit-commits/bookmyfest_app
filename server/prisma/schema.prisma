@@ -110,6 +110,7 @@ model Event {
   maxMembers           Int            @default(1) @map("max_members")
   isApproved           Boolean        @default(true) @map("is_approved")
   isPendingDeletion    Boolean        @default(false) @map("is_pending_deletion")
+  rejectionReason      String?        @map("rejection_reason")
   pendingUpdates       Json?          @map("pending_updates")
   createdAt            DateTime       @default(now()) @map("created_at")
   updatedAt            DateTime       @updatedAt @map("updated_at")

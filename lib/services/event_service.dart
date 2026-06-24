@@ -458,12 +458,17 @@ class EventService {
     }
   }
 
-  // Discard updates
-  Future<void> rejectEventUpdate(String token, String eventId) async {
+  // Discard updates / reject event with a reason
+  Future<void> rejectEventUpdate(
+    String token,
+    String eventId, {
+    String? reason,
+  }) async {
     try {
       final response = await http.post(
         Uri.parse("$baseUrl/events/$eventId/reject-update"),
         headers: _headers(token),
+        body: jsonEncode({"reason": reason}),
       );
       final responseData = jsonDecode(response.body);
       if (response.statusCode != 200 || responseData['success'] != true) {

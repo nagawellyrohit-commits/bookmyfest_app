@@ -281,14 +281,62 @@ export const updateEvent = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Brochure limit is 150 pages' });
     }
 
-    // If Coordinator: save changes to pendingUpdates
+    // If Coordinator:
     if (actor.role === 'coordinator') {
-      const updatedEvent = await prisma.event.update({
-        where: { id },
-        data: {
-          pendingUpdates: updateData
+      let updatedEvent;
+      const wasRejected = existingEvent.rejectionReason !== null;
+
+      if (wasRejected) {
+        // If it was rejected, we store the edits in pendingUpdates so it shows as edited with options.
+        // We do NOT clear rejectionReason here so the faculty knows why it was rejected.
+        updatedEvent = await prisma.event.update({
+          where: { id },
+          data: {
+            pendingUpdates: updateData
+          }
+        });
+      } else if (!existingEvent.isApproved) {
+        // Direct update for draft/unapproved event if it was NOT rejected
+        const finalData = {};
+        if (updateData.title !== undefined) finalData.title = updateData.title;
+        if (updateData.description !== undefined) finalData.description = updateData.description;
+        if (updateData.eventDate !== undefined) finalData.eventDate = new Date(updateData.eventDate);
+        if (updateData.registrationDeadline !== undefined) finalData.registrationDeadline = new Date(updateData.registrationDeadline);
+        if (updateData.isPaid !== undefined) {
+          finalData.isPaid = !!updateData.isPaid;
+          finalData.entryFee = updateData.isPaid ? Number(updateData.entryFee || 0) : 0.00;
+          finalData.upiId = updateData.isPaid ? updateData.upiId : null;
         }
-      });
+        if (updateData.branch !== undefined) finalData.branch = updateData.branch;
+        if (updateData.category !== undefined) finalData.category = updateData.category;
+        if (updateData.brochureUrl !== undefined) finalData.brochureUrl = updateData.brochureUrl;
+        if (updateData.brochurePages !== undefined) finalData.brochurePages = Number(updateData.brochurePages);
+        if (updateData.posterUrl1 !== undefined) finalData.posterUrl1 = updateData.posterUrl1;
+        if (updateData.posterUrl2 !== undefined) finalData.posterUrl2 = updateData.posterUrl2;
+        if (updateData.posterUrl3 !== undefined) finalData.posterUrl3 = updateData.posterUrl3;
+        if (updateData.posterUrl4 !== undefined) finalData.posterUrl4 = updateData.posterUrl4;
+        if (updateData.whatsAppGroupLink !== undefined) finalData.whatsAppGroupLink = updateData.whatsAppGroupLink;
+        if (updateData.eventType !== undefined) finalData.eventType = updateData.eventType;
+        if (updateData.minMembers !== undefined) finalData.minMembers = Number(updateData.minMembers);
+        if (updateData.maxMembers !== undefined) finalData.maxMembers = Number(updateData.maxMembers);
+        
+        finalData.rejectionReason = null; // Clear rejection reason
+        finalData.pendingUpdates = null;  // Clear pending updates just in case
+
+        updatedEvent = await prisma.event.update({
+          where: { id },
+          data: finalData
+        });
+      } else {
+        // Save changes to pendingUpdates for already approved events
+        updatedEvent = await prisma.event.update({
+          where: { id },
+          data: {
+            pendingUpdates: updateData,
+            rejectionReason: null // Clear any prior rejection reason
+          }
+        });
+      }
 
       // Send email notifications to faculty of the same college
       try {
@@ -311,11 +359,19 @@ export const updateEvent = async (req, res, next) => {
         });
         const eventTitle = updatedEvent.title || existingEvent.title;
         for (const faculty of faculties) {
-          const subject = `Event Update Request: ${eventTitle}`;
-          const text = `Hello ${faculty.fullName},\n\nCoordinator ${coordinatorName} has edited the event "${eventTitle}".\n\nPlease log in to review and approve/reject these updates.`;
-          const html = `<p>Hello <strong>${faculty.fullName}</strong>,</p>
-                        <p>Coordinator <strong>${coordinatorName}</strong> has edited the event <strong>"${eventTitle}"</strong>.</p>
-                        <p>Please log in to review and approve/reject these updates.</p>`;
+          const subject = wasRejected 
+            ? `Edited Rejected Event: ${eventTitle}`
+            : `Event Update Request: ${eventTitle}`;
+          const text = wasRejected
+            ? `Hello ${faculty.fullName},\n\nCoordinator ${coordinatorName} has edited the rejected event "${eventTitle}".\n\nPlease log in to review and approve/reject these updates.`
+            : `Hello ${faculty.fullName},\n\nCoordinator ${coordinatorName} has edited the event "${eventTitle}".\n\nPlease log in to review and approve/reject these updates.`;
+          const html = wasRejected
+            ? `<p>Hello <strong>${faculty.fullName}</strong>,</p>
+               <p>Coordinator <strong>${coordinatorName}</strong> has edited the rejected event <strong>"${eventTitle}"</strong>.</p>
+               <p>Please log in to review and approve/reject these updates.</p>`
+            : `<p>Hello <strong>${faculty.fullName}</strong>,</p>
+               <p>Coordinator <strong>${coordinatorName}</strong> has edited the event <strong>"${eventTitle}"</strong>.</p>
+               <p>Please log in to review and approve/reject these updates.</p>`;
           sendEmailNotification(faculty.email, subject, text, html).catch(err => console.error("Error sending email to faculty:", err));
         }
       } catch (err) {
@@ -324,7 +380,11 @@ export const updateEvent = async (req, res, next) => {
 
       return res.status(200).json({
         success: true,
-        message: 'Event updates submitted and pending Faculty Admin approval',
+        message: wasRejected
+          ? 'Event updates submitted for the rejected event'
+          : (existingEvent.isApproved
+              ? 'Event updates submitted and pending Faculty Admin approval'
+              : 'Event updated successfully and pending Faculty Admin approval'),
         data: updatedEvent
       });
     }
@@ -399,8 +459,17 @@ export const deleteEvent = async (req, res, next) => {
       });
     }
 
-    // If Coordinator: set pending deletion flag
+    // If Coordinator: set pending deletion flag (unless the event is not approved/draft)
     if (actor.role === 'coordinator') {
+      if (!existingEvent.isApproved) {
+        await prisma.event.delete({ where: { id } });
+        await logAudit(actor.id, 'DELETE_EVENT', 'events', id, existingEvent, null);
+        return res.status(200).json({
+          success: true,
+          message: 'Event deleted/discarded successfully'
+        });
+      }
+
       const updatedEvent = await prisma.event.update({
         where: { id },
         data: {
@@ -484,7 +553,7 @@ export const approveEventUpdate = async (req, res, next) => {
     }
 
     const updates = event.pendingUpdates;
-    const finalData = { pendingUpdates: null }; // clear pending updates
+    const finalData = { pendingUpdates: null, rejectionReason: null }; // clear pending updates and rejection reason
 
     if (!event.isApproved) {
       finalData.isApproved = true;
@@ -574,6 +643,8 @@ export const approveEventUpdate = async (req, res, next) => {
 // Discard proposed event updates
 export const rejectEventUpdate = async (req, res, next) => {
   const { id } = req.params;
+  const { reason } = req.body;
+  const finalReason = reason || 'No specific modifications suggested by faculty';
   try {
     const actor = req.user;
     if (actor.role !== 'faculty_admin' && actor.role !== 'super_admin') {
@@ -602,7 +673,12 @@ export const rejectEventUpdate = async (req, res, next) => {
     }
 
     if (!event.isApproved) {
-      await prisma.event.delete({ where: { id } });
+      const updatedEvent = await prisma.event.update({
+        where: { id },
+        data: {
+          rejectionReason: finalReason
+        }
+      });
 
       // Send email notifications to coordinators of the same college
       try {
@@ -620,9 +696,10 @@ export const rejectEventUpdate = async (req, res, next) => {
         const eventTitle = event.title;
         for (const coord of coordinators) {
           const subject = `Event Creation Rejected: ${eventTitle}`;
-          const text = `Hello ${coord.fullName},\n\nThe request to create/publish the event "${eventTitle}" has been rejected/discarded by ${actorName}.`;
+          const text = `Hello ${coord.fullName},\n\nThe request to create/publish the event "${eventTitle}" has been rejected/discarded by ${actorName}.\n\nReason/Modifications:\n${finalReason}`;
           const html = `<p>Hello <strong>${coord.fullName}</strong>,</p>
-                        <p>The request to create/publish the event <strong>"${eventTitle}"</strong> has been rejected/discarded by <strong>${actorName}</strong>.</p>`;
+                        <p>The request to create/publish the event <strong>"${eventTitle}"</strong> has been rejected/discarded by <strong>${actorName}</strong>.</p>
+                        <p><strong>Reason/Modifications requested:</strong> ${finalReason}</p>`;
           sendEmailNotification(coord.email, subject, text, html).catch(err => console.error("Error sending email to coordinator:", err));
         }
       } catch (err) {
@@ -631,14 +708,17 @@ export const rejectEventUpdate = async (req, res, next) => {
 
       return res.status(200).json({
         success: true,
-        message: 'Event creation request rejected and event deleted',
-        data: { id, isDeleted: true }
+        message: 'Event creation request rejected and reason saved',
+        data: updatedEvent
       });
     }
 
     const updatedEvent = await prisma.event.update({
       where: { id },
-      data: { pendingUpdates: null }
+      data: {
+        pendingUpdates: null,
+        rejectionReason: finalReason
+      }
     });
 
     // Send email notifications to coordinators of the same college
@@ -657,9 +737,10 @@ export const rejectEventUpdate = async (req, res, next) => {
       const eventTitle = event.title;
       for (const coord of coordinators) {
         const subject = `Event Update Rejected: ${eventTitle}`;
-        const text = `Hello ${coord.fullName},\n\nThe proposed updates for the event "${eventTitle}" have been rejected/discarded by ${actorName}.`;
+        const text = `Hello ${coord.fullName},\n\nThe proposed updates for the event "${eventTitle}" have been rejected/discarded by ${actorName}.\n\nReason/Modifications:\n${finalReason}`;
         const html = `<p>Hello <strong>${coord.fullName}</strong>,</p>
-                      <p>The proposed updates for the event <strong>"${eventTitle}"</strong> have been rejected/discarded by <strong>${actorName}</strong>.</p>`;
+                      <p>The proposed updates for the event <strong>"${eventTitle}"</strong> have been rejected/discarded by <strong>${actorName}</strong>.</p>
+                      <p><strong>Reason/Modifications requested:</strong> ${finalReason}</p>`;
         sendEmailNotification(coord.email, subject, text, html).catch(err => console.error("Error sending email to coordinator:", err));
       }
     } catch (err) {
@@ -668,7 +749,7 @@ export const rejectEventUpdate = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: 'Pending updates discarded',
+      message: 'Pending updates discarded and reason saved',
       data: updatedEvent
     });
   } catch (error) {

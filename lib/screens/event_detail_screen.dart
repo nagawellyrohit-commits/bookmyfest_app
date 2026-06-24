@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import '../theme/app_theme.dart';
 import '../providers/user_provider.dart';
@@ -147,14 +146,6 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                 title: const Text('Upload from Gallery'),
                 onTap: () => Navigator.pop(context, 'gallery'),
               ),
-              ListTile(
-                leading: const Icon(
-                  Icons.picture_as_pdf_outlined,
-                  color: AppTheme.primary,
-                ),
-                title: const Text('Upload PDF Document'),
-                onTap: () => Navigator.pop(context, 'pdf'),
-              ),
               const SizedBox(height: 12),
             ],
           ),
@@ -165,7 +156,6 @@ class _EventDetailScreenState extends State<EventDetailScreen>
 
       Uint8List? fileBytes;
       String? fileName;
-      bool isPdf = false;
 
       if (source == 'camera' || source == 'gallery') {
         final ImagePicker picker = ImagePicker();
@@ -176,17 +166,6 @@ class _EventDetailScreenState extends State<EventDetailScreen>
         if (pickedFile == null) return;
         fileName = pickedFile.name;
         fileBytes = await pickedFile.readAsBytes();
-      } else if (source == 'pdf') {
-        final FilePickerResult? result = await FilePicker.pickFiles(
-          type: FileType.custom,
-          allowedExtensions: ['pdf'],
-          withData: true,
-        );
-        if (result == null) return;
-        final file = result.files.single;
-        fileName = file.name;
-        fileBytes = file.bytes;
-        isPdf = true;
       }
 
       if (fileBytes == null || fileName == null) {
@@ -203,13 +182,8 @@ class _EventDetailScreenState extends State<EventDetailScreen>
         _isUploadingPoster1 = true;
       });
 
-      String fileUrl;
       final authService = AuthService();
-      if (isPdf) {
-        fileUrl = await authService.uploadPdf(fileBytes, fileName);
-      } else {
-        fileUrl = await authService.uploadImage(fileBytes, fileName);
-      }
+      final String fileUrl = await authService.uploadImage(fileBytes, fileName);
 
       setState(() {
         _posterUrl1Controller.text = fileUrl;
@@ -351,6 +325,13 @@ class _EventDetailScreenState extends State<EventDetailScreen>
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text("Please enter a title")));
+      return;
+    }
+
+    if (_posterUrl1Controller.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please upload or provide Poster 1")),
+      );
       return;
     }
 
@@ -508,6 +489,13 @@ class _EventDetailScreenState extends State<EventDetailScreen>
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text("Please enter a title")));
+      return;
+    }
+
+    if (_posterUrl1Controller.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please upload or provide Poster 1")),
+      );
       return;
     }
 
@@ -783,7 +771,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                   controller: _categoryController,
                   decoration: AppTheme.inputDecoration(
                     labelText:
-                        "Event Category (e.g. Football, Cricket, Hackathon)",
+                        "Event Category (e.g. Sports, Technical, Cultural, Hackathon,...)",
                     prefixIcon: Icons.category_outlined,
                   ),
                 ),
@@ -874,7 +862,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                 TextField(
                   controller: _posterUrl1Controller,
                   decoration: AppTheme.inputDecoration(
-                    labelText: "Poster URL 1",
+                    labelText: "Poster URL 1 *",
                     prefixIcon: Icons.image_outlined,
                     suffixIcon: _isUploadingPoster1
                         ? const SizedBox(
@@ -1194,6 +1182,141 @@ class _EventDetailScreenState extends State<EventDetailScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (ev['rejectionReason'] != null && user.role == 'coordinator') ...[
+          (() {
+            final hasUpdates = ev['pendingUpdates'] != null;
+            if (hasUpdates) {
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.blue.withValues(alpha: 0.3),
+                    width: 1.2,
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.info_outline_rounded,
+                      color: Colors.blueAccent,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "EDITS SUBMITTED",
+                            style: TextStyle(
+                              color: Colors.blueAccent,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            "Your modifications have been submitted. Faculty Admin will review them soon.",
+                            style: TextStyle(
+                              color: AppTheme.textPrimary.withValues(
+                                alpha: 0.9,
+                              ),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "Previous feedback: ${ev['rejectionReason']}",
+                            style: const TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            } else {
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.red.withValues(alpha: 0.3),
+                    width: 1.2,
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.redAccent,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "REJECTED / ACTION REQUIRED",
+                            style: TextStyle(
+                              color: Colors.redAccent,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            ev['isApproved'] == false
+                                ? "Faculty Admin has requested modifications before approving this event."
+                                : "Faculty Admin has rejected the proposed updates for this event.",
+                            style: TextStyle(
+                              color: AppTheme.textPrimary.withValues(
+                                alpha: 0.9,
+                              ),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              ev['rejectionReason'],
+                              style: const TextStyle(
+                                color: Colors.redAccent,
+                                fontSize: 13,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+          }()),
+          const SizedBox(height: 16),
+        ],
         if (ev['isApproved'] == false) ...[
           Container(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -1669,7 +1792,8 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                 ev['creator']?['fullName'] ?? 'Faculty Board',
               ),
 
-              if (ev['whatsAppGroupLink'] != null &&
+              if (user.role != 'guest' &&
+                  ev['whatsAppGroupLink'] != null &&
                   ev['whatsAppGroupLink'].toString().isNotEmpty) ...[
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
