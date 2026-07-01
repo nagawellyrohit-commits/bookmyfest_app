@@ -1307,6 +1307,93 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                               ),
                             ),
                           ),
+                          if (ev['isApproved'] == true) ...[
+                            const SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                TextButton.icon(
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.redAccent,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 8,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      side: const BorderSide(
+                                        color: Colors.redAccent,
+                                        width: 1,
+                                      ),
+                                    ),
+                                  ),
+                                  icon: const Icon(
+                                    Icons.check_circle_outline_rounded,
+                                    size: 16,
+                                  ),
+                                  label: const Text(
+                                    "Dismiss & Keep Original",
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  onPressed: () async {
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text("Accept Rejection & Keep Original"),
+                                        content: const Text(
+                                          "This will dismiss the rejection feedback and revert the event view back to its approved state. The proposed changes will be discarded. Are you sure?",
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context, false),
+                                            child: const Text("Cancel"),
+                                          ),
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context, true),
+                                            child: const Text("Dismiss Feedback"),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirm == true) {
+                                      setState(() => _isLoading = true);
+                                      try {
+                                        await _eventService.dismissEventRejection(
+                                          user.token!,
+                                          ev['id'],
+                                        );
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text("Rejection feedback dismissed"),
+                                              backgroundColor: Colors.green,
+                                            ),
+                                          );
+                                          _fetchDetails();
+                                        }
+                                      } catch (e) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text("Error: $e"),
+                                              backgroundColor: AppTheme.accent,
+                                            ),
+                                          );
+                                        }
+                                      } finally {
+                                        if (mounted) {
+                                          setState(() => _isLoading = false);
+                                        }
+                                      }
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
                         ],
                       ),
                     ),

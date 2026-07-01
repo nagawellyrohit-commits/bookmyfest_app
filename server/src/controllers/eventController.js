@@ -882,3 +882,36 @@ export const rejectEventDelete = async (req, res, next) => {
     next(error);
   }
 };
+
+// Dismiss rejection feedback to return event to normal approved state
+export const dismissEventRejection = async (req, res, next) => {
+  const { id } = req.params;
+  try {
+    const actor = req.user;
+    if (actor.role !== 'coordinator' && actor.role !== 'faculty_admin' && actor.role !== 'super_admin') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    const event = await prisma.event.findUnique({ where: { id } });
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Event not found' });
+    }
+
+    if (actor.role !== 'super_admin' && event.collegeId !== actor.collegeId) {
+      return res.status(403).json({ success: false, message: 'Access denied: college mismatch' });
+    }
+
+    const updatedEvent = await prisma.event.update({
+      where: { id },
+      data: { rejectionReason: null }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Rejection feedback dismissed successfully',
+      data: updatedEvent
+    });
+  } catch (error) {
+    next(error);
+  }
+};

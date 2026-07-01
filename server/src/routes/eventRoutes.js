@@ -9,7 +9,8 @@ import {
   approveEventUpdate,
   rejectEventUpdate,
   approveEventDelete,
-  rejectEventDelete
+  rejectEventDelete,
+  dismissEventRejection
 } from '../controllers/eventController.js';
 import { getPendingPayments } from '../controllers/registrationController.js';
 import { authenticateToken, authorizeRoles } from '../middleware/authMiddleware.js';
@@ -23,6 +24,7 @@ router.post('/:id/approve-update', authenticateToken, authorizeRoles('faculty_ad
 router.post('/:id/reject-update', authenticateToken, authorizeRoles('faculty_admin', 'super_admin'), rejectEventUpdate);
 router.post('/:id/approve-delete', authenticateToken, authorizeRoles('faculty_admin', 'super_admin'), approveEventDelete);
 router.post('/:id/reject-delete', authenticateToken, authorizeRoles('faculty_admin', 'super_admin'), rejectEventDelete);
+router.post('/:id/dismiss-rejection', authenticateToken, authorizeRoles('coordinator', 'faculty_admin', 'super_admin'), dismissEventRejection);
 
 // Public routes for logged in users (Students see all; Coordinators & Admins see college-specific)
 router.get('/', authenticateToken, getAllEvents);

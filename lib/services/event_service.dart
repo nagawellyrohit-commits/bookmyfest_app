@@ -504,4 +504,20 @@ class EventService {
       throw Exception(e.toString().replaceAll("Exception: ", ""));
     }
   }
+
+  // Dismiss rejection feedback
+  Future<void> dismissEventRejection(String token, String eventId) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/events/$eventId/dismiss-rejection"),
+        headers: _headers(token),
+      );
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode != 200 || responseData['success'] != true) {
+        throw Exception(responseData['message'] ?? 'Failed to dismiss rejection');
+      }
+    } catch (e) {
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
+    }
+  }
 }
