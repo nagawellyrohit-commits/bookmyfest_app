@@ -1,10 +1,17 @@
 import nodemailer from 'nodemailer';
 import axios from 'axios';
 
+const cleanEnvVar = (val) => {
+  if (typeof val !== 'string') return val;
+  return val.replace(/^["']|["']$/g, '').trim();
+};
+
 // Configure Nodemailer SMTP Transporter
 const createMailTransporter = () => {
+  const smtpUser = cleanEnvVar(process.env.SMTP_USER);
+
   // If credentials are placeholders, return a mock transporter
-  if (process.env.SMTP_USER === 'smtp_user_placeholder') {
+  if (!smtpUser || smtpUser === 'smtp_user_placeholder') {
     return {
       sendMail: async (mailOptions) => {
         console.log(`[MOCK EMAIL SENT] To: ${mailOptions.to} | Subject: ${mailOptions.subject}\nBody: ${mailOptions.text || mailOptions.html}`);
@@ -13,14 +20,17 @@ const createMailTransporter = () => {
     };
   }
 
-  const port = parseInt(process.env.SMTP_PORT || '2525');
+  const host = cleanEnvVar(process.env.SMTP_HOST) || 'smtp.mailtrap.io';
+  const port = parseInt(cleanEnvVar(process.env.SMTP_PORT) || '2525');
+  const pass = cleanEnvVar(process.env.SMTP_PASS);
+
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.mailtrap.io',
+    host: host,
     port: port,
     secure: port === 465,
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
+      user: smtpUser,
+      pass: pass,
     },
   });
 };
@@ -36,7 +46,7 @@ export const sendEmailNotification = async (to, subject, text, html = '') => {
   try {
     const transporter = createMailTransporter();
     const info = await transporter.sendMail({
-      from: process.env.SMTP_FROM || 'no-reply@bookmyfest.co',
+      from: cleanEnvVar(process.env.SMTP_FROM) || 'no-reply@bookmyfest.co',
       to,
       subject,
       text,
