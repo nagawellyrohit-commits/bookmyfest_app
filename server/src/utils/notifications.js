@@ -13,9 +13,11 @@ const createMailTransporter = () => {
     };
   }
 
+  const port = parseInt(process.env.SMTP_PORT || '2525');
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.mailtrap.io',
-    port: parseInt(process.env.SMTP_PORT || '2525'),
+    port: port,
+    secure: port === 465,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
