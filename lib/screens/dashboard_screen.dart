@@ -996,42 +996,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     ),
                                   ),
                                 ),
-                                // Pending Approval Badge
+                                // Pending Approval or Rejected Badge
                                 if (ev['isApproved'] == false)
                                   Positioned(
                                     top: 12,
                                     right: 12,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 5,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.orange.withValues(
-                                          alpha: 0.9,
+                                    child: (() {
+                                      final hasRejection = ev['rejectionReason'] != null;
+                                      return Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 5,
                                         ),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.hourglass_empty_rounded,
-                                            color: Colors.white,
-                                            size: 14,
-                                          ),
-                                          SizedBox(width: 4),
-                                          Text(
-                                            "Pending Approval",
-                                            style: TextStyle(
+                                        decoration: BoxDecoration(
+                                          color: hasRejection
+                                              ? Colors.red.withValues(alpha: 0.9)
+                                              : Colors.orange.withValues(alpha: 0.9),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              hasRejection
+                                                  ? Icons.cancel_rounded
+                                                  : Icons.hourglass_empty_rounded,
                                               color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 10,
+                                              size: 14,
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              hasRejection ? "Rejected / Action Required" : "Pending Approval",
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 10,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    })(),
                                   ),
                               ],
                             ),
