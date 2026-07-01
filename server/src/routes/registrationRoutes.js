@@ -10,8 +10,8 @@ import { authenticateToken, authorizeRoles } from '../middleware/authMiddleware.
 const router = express.Router();
 
 // Student routes (Register & Unregister)
-router.post('/:id/register', authenticateToken, registerForEvent);
-router.delete('/:id/registrations/:regId', authenticateToken, unregisterFromEvent);
+router.post('/:id/register', authenticateToken, authorizeRoles('student'), registerForEvent);
+router.delete('/:id/registrations/:regId', authenticateToken, authorizeRoles('student'), unregisterFromEvent);
 
 // Coordinator/Admin routes (View event signups, verify payments)
 router.get('/:id/registrations', authenticateToken, authorizeRoles('coordinator', 'faculty_admin', 'super_admin'), getEventRegistrations);

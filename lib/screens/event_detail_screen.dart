@@ -56,6 +56,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
   final _minMembersController = TextEditingController(text: "1");
   final _maxMembersController = TextEditingController(text: "1");
   bool _isEditing = false;
+  bool _isRejectionEdit = false;
 
   // Student Registration Controllers
   final _payRefController = TextEditingController();
@@ -412,6 +413,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
       await _eventService.updateEvent(user.token!, _event!['id'], payload);
       setState(() {
         _isEditing = false;
+        _isRejectionEdit = false;
       });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1096,7 +1098,9 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                       child: ElevatedButton(
                         onPressed: isEditMode ? _updateEvent : _createEvent,
                         child: Text(
-                          isEditMode ? "Save Changes" : "Publish Event",
+                          isEditMode
+                              ? (_isRejectionEdit ? "Resubmit" : "Save Changes")
+                              : "Publish Event",
                         ),
                       ),
                     ),
@@ -1107,7 +1111,10 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.accent,
                           ),
-                          onPressed: () => setState(() => _isEditing = false),
+                          onPressed: () => setState(() {
+                            _isEditing = false;
+                            _isRejectionEdit = false;
+                          }),
                           child: const Text("Cancel"),
                         ),
                       ),
@@ -1333,7 +1340,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                                   size: 16,
                                 ),
                                 label: const Text(
-                                  "Edit & Resubmit",
+                                  "Edit",
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
@@ -1342,6 +1349,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                                 onPressed: () {
                                   setState(() {
                                     _isEditing = true;
+                                    _isRejectionEdit = true;
                                   });
                                 },
                               ),
