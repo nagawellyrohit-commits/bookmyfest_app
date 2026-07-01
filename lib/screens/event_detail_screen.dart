@@ -1307,11 +1307,44 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                               ),
                             ),
                           ),
-                          if (ev['isApproved'] == true) ...[
-                            const SizedBox(height: 12),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton.icon(
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.blueAccent,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    side: const BorderSide(
+                                      color: Colors.blueAccent,
+                                      width: 1,
+                                    ),
+                                  ),
+                                ),
+                                icon: const Icon(
+                                  Icons.edit_rounded,
+                                  size: 16,
+                                ),
+                                label: const Text(
+                                  "Edit & Resubmit",
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _isEditing = true;
+                                  });
+                                },
+                              ),
+                              if (ev['isApproved'] == true) ...[
+                                const SizedBox(width: 8),
                                 TextButton.icon(
                                   style: TextButton.styleFrom(
                                     foregroundColor: Colors.redAccent,
@@ -1392,8 +1425,8 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                                   },
                                 ),
                               ],
-                            ),
-                          ],
+                            ],
+                          ),
                         ],
                       ),
                     ),
