@@ -67,8 +67,13 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>This app needs access to the camera to take photos of your student ID proof for verification.</string>
+	<string>This app needs access to the camera to take photos of your student ID proof for verification and to scan event check-in QR codes.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>This app needs access to the photo library to upload your student ID proof image.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs access to your location to show relevant college events and festivals nearby.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>
+

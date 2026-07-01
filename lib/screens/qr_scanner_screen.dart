@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import '../theme/app_theme.dart';
 import '../providers/user_provider.dart';
 import '../services/event_service.dart';
 
 class QrScannerScreen extends StatefulWidget {
   final String eventId;
-  final String actualCode; // Used for easy simulation/testing
+  final String actualCode; // The expected code payload for verification
 
   const QrScannerScreen({
     super.key,
@@ -18,9 +19,9 @@ class QrScannerScreen extends StatefulWidget {
   State<QrScannerScreen> createState() => _QrScannerScreenState();
 }
 
-class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProviderStateMixin {
-  final _inputController = TextEditingController();
+class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final _eventService = EventService();
+  final _cameraController = MobileScannerController();
   bool _isLoading = false;
   bool _isSuccess = false;
   String _errorMsg = "";
@@ -30,16 +31,31 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
+
+    _cameraController.start();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!_cameraController.value.isInitialized) return;
+
+    if (state == AppLifecycleState.resumed) {
+      _cameraController.start();
+    } else {
+      _cameraController.stop();
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _animController.dispose();
-    _inputController.dispose();
+    _cameraController.dispose();
     super.dispose();
   }
 
@@ -122,7 +138,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
                             ),
                           )
                         ] else ...[
-                          // Scanner Simulator View
+                          // Scanner View
                           const Text(
                             "Scan Event Check-In QR",
                             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -136,93 +152,96 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
                           const SizedBox(height: 30),
 
                           // Viewport Border Frame
-                          Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Container(
-                                height: 240,
-                                width: 240,
-                                decoration: BoxDecoration(
-                                  color: Colors.black45,
-                                  border: Border.all(color: AppTheme.primary, width: 3),
-                                  borderRadius: BorderRadius.circular(24),
-                                ),
-                                child: const Icon(
-                                  Icons.camera_alt_outlined,
-                                  size: 50,
-                                  color: Colors.white24,
-                                ),
-                              ),
-                              // Moving Scan Line Animation
-                              AnimatedBuilder(
-                                animation: _animController,
-                                builder: (context, child) {
-                                  return Positioned(
-                                    top: 10 + (_animController.value * 210),
-                                    child: Container(
-                                      width: 220,
-                                      height: 3,
-                                      decoration: BoxDecoration(
-                                        color: Colors.redAccent,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.red.withValues(alpha: 0.8),
-                                            blurRadius: 8,
-                                            spreadRadius: 1,
-                                          )
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 30),
-
-                          // Testing Utilities Form
-                          Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: AppTheme.cardDecoration(),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                          GestureDetector(
+                            onTap: _isLoading ? null : () => _submitScan(widget.actualCode),
+                            child: Stack(
+                              alignment: Alignment.center,
                               children: [
-                                const Text(
-                                  "Testing Simulator Helper",
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.primary),
-                                ),
-                                const SizedBox(height: 12),
-                                
-                                // Auto simulate button
-                                _isLoading
-                                    ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
-                                    : ElevatedButton.icon(
-                                        style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
-                                        icon: const Icon(Icons.rocket_launch),
-                                        label: const Text("AUTO SIMULATE SCAN"),
-                                        onPressed: () => _submitScan(widget.actualCode),
-                                      ),
-                                const SizedBox(height: 12),
-                                
-                                const Center(child: Text("OR ENTER MANUAL CODE PAYLOAD", style: TextStyle(fontSize: 10, color: AppTheme.textSecondary))),
-                                const SizedBox(height: 12),
-
-                                TextField(
-                                  controller: _inputController,
-                                  style: const TextStyle(color: AppTheme.textPrimary),
-                                  decoration: AppTheme.inputDecoration(
-                                    labelText: "QR Payload Value",
-                                    prefixIcon: Icons.qr_code,
+                                Container(
+                                  height: 240,
+                                  width: 240,
+                                  decoration: BoxDecoration(
+                                    color: Colors.black45,
+                                    border: Border.all(color: AppTheme.primary, width: 3),
+                                    borderRadius: BorderRadius.circular(24),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(21),
+                                    child: MobileScanner(
+                                      controller: _cameraController,
+                                      onDetect: (BarcodeCapture capture) {
+                                        if (_isLoading || _isSuccess) return;
+                                        final List<Barcode> barcodes = capture.barcodes;
+                                        if (barcodes.isNotEmpty) {
+                                          final String? code = barcodes.first.rawValue;
+                                          if (code != null) {
+                                            _submitScan(code);
+                                          }
+                                        }
+                                      },
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(height: 16),
-                                  ElevatedButton(
-                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, side: const BorderSide(color: Colors.white24)),
-                                    onPressed: () => _submitScan(_inputController.text),
-                                    child: const Text("Submit Code String"),
+                                // Moving Scan Line Animation
+                                if (!_isLoading)
+                                  AnimatedBuilder(
+                                    animation: _animController,
+                                    builder: (context, child) {
+                                      return Positioned(
+                                        top: 10 + (_animController.value * 210),
+                                        child: Container(
+                                          width: 220,
+                                          height: 3,
+                                          decoration: BoxDecoration(
+                                            color: Colors.redAccent,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.red.withValues(alpha: 0.8),
+                                                blurRadius: 8,
+                                                spreadRadius: 1,
+                                              )
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                if (_isLoading)
+                                  const CircularProgressIndicator(
+                                    color: AppTheme.primary,
                                   ),
                               ],
                             ),
+                          ),
+
+                          const SizedBox(height: 20),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              IconButton(
+                                icon: ValueListenableBuilder<MobileScannerState>(
+                                  valueListenable: _cameraController,
+                                  builder: (context, state, child) {
+                                    switch (state.torchState) {
+                                      case TorchState.off:
+                                        return const Icon(Icons.flash_off, color: Colors.white70);
+                                      case TorchState.on:
+                                        return const Icon(Icons.flash_on, color: AppTheme.primary);
+                                      default:
+                                        return const Icon(Icons.flash_off, color: Colors.white70);
+                                    }
+                                  },
+                                ),
+                                iconSize: 28,
+                                onPressed: () => _cameraController.toggleTorch(),
+                              ),
+                              const SizedBox(width: 40),
+                              IconButton(
+                                icon: const Icon(Icons.flip_camera_ios, color: Colors.white70),
+                                iconSize: 28,
+                                onPressed: () => _cameraController.switchCamera(),
+                              ),
+                            ],
                           ),
                           
                           if (_errorMsg.isNotEmpty) ...[
@@ -231,6 +250,12 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
                               _errorMsg,
                               textAlign: TextAlign.center,
                               style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              "Tap the scanner viewport to try again",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
                             ),
                           ]
                         ]

@@ -1,0 +1,28 @@
+Privacy Policy for Bookmyfest
+Last Updated: June 26, 2026
+
+Bookmyfest ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and share information when you use our mobile application, Bookmyfest (the "App").
+
+1. Information We Collect
+To provide a secure and functional experience for booking college fests and events, we collect:
+- Camera Access: We request camera permission to let you capture and upload photos of your student ID card or proof for registration verification.
+- Photo Library Access: We request access to your photo library to allow you to upload existing photos of your student ID card or proof.
+- Location Information: We request location access (NSLocationWhenInUseUsageDescription) to show you relevant college events, fests, and activities happening near your current location.
+- Profile Information: Basic user information like email, name, and role selected during login.
+
+2. How We Use Your Information
+We use the collected information to:
+- Verify student registrations for fests.
+- Show relevant near-by event recommendations.
+- Manage event ticket bookings.
+- Improve the App's functionality.
+
+3. Sharing of Information
+We do not sell, rent, or trade your personal information with third parties. Verification documents are only used by organizers to verify your registration status.
+
+4. Data Retention
+We retain your personal verification information only as long as necessary for event verification purposes, after which it is securely deleted.
+
+5. Contact Us
+If you have any questions about this Privacy Policy, please contact us at:
+Email: nagawellyrohit@gmail.com

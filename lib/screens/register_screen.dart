@@ -707,7 +707,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     left: 4.0,
                                   ),
                                   child: Text(
-                                    "${_getIdProofLabel()} Proof${(_selectedRole == 'student' || _selectedRole == 'coordinator') ? ' (Required)' : ''}",
+                                    "${_getIdProofLabel()} Proof${(_selectedRole == 'student' || _selectedRole == 'coordinator') ? ' (Required)' : ' (Optional)'}",
                                     style: const TextStyle(
                                       color: Color(0xFF0F172A),
                                       fontWeight: FontWeight.bold,
