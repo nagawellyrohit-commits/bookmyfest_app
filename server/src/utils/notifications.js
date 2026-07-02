@@ -43,10 +43,41 @@ const createMailTransporter = () => {
  * @param {string} html - HTML body (optional)
  */
 export const sendEmailNotification = async (to, subject, text, html = '') => {
+  const brevoApiKey = cleanEnvVar(process.env.BREVO_API_KEY);
+  const fromEmail = cleanEnvVar(process.env.SMTP_FROM) || 'no-reply@bookmyfest.co';
+
+  if (brevoApiKey) {
+    try {
+      const response = await axios.post(
+        'https://api.brevo.com/v3/smtp/email',
+        {
+          sender: { name: 'BookMyFest', email: fromEmail },
+          to: [{ email: to }],
+          subject: subject,
+          htmlContent: html || `<p>${text}</p>`,
+          textContent: text
+        },
+        {
+          headers: {
+            'api-key': brevoApiKey,
+            'content-type': 'application/json',
+            'accept': 'application/json'
+          }
+        }
+      );
+      console.log(`[Brevo Email Sent] Message ID: ${response.data.messageId}`);
+      return { success: true, messageId: response.data.messageId };
+    } catch (error) {
+      const errMsg = error.response?.data?.message || error.response?.data || error.message;
+      console.error('[Brevo Email Failed]', errMsg);
+      return { success: false, error: errMsg };
+    }
+  }
+
   try {
     const transporter = createMailTransporter();
     const info = await transporter.sendMail({
-      from: cleanEnvVar(process.env.SMTP_FROM) || 'no-reply@bookmyfest.co',
+      from: fromEmail,
       to,
       subject,
       text,

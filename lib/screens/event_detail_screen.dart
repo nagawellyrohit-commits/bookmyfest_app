@@ -373,8 +373,8 @@ class _EventDetailScreenState extends State<EventDetailScreen>
       final payload = {
         "title": _titleController.text.trim(),
         "description": _descController.text.trim(),
-        "eventDate": _eventDate.toIso8601String(),
-        "registrationDeadline": _deadline.toIso8601String(),
+        "eventDate": _eventDate.toUtc().toIso8601String(),
+        "registrationDeadline": _deadline.toUtc().toIso8601String(),
         "isPaid": _isPaid,
         "entryFee": _isPaid
             ? double.tryParse(_feeController.text) ?? 0.00
@@ -538,8 +538,8 @@ class _EventDetailScreenState extends State<EventDetailScreen>
       final payload = {
         "title": _titleController.text.trim(),
         "description": _descController.text.trim(),
-        "eventDate": _eventDate.toIso8601String(),
-        "registrationDeadline": _deadline.toIso8601String(),
+        "eventDate": _eventDate.toUtc().toIso8601String(),
+        "registrationDeadline": _deadline.toUtc().toIso8601String(),
         "isPaid": _isPaid,
         "entryFee": _isPaid
             ? double.tryParse(_feeController.text) ?? 0.00
