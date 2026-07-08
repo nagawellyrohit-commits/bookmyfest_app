@@ -709,8 +709,19 @@ export const deleteCoordinator = async (req, res, next) => {
 export const deleteAccount = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const userEmail = req.user.email;
-    const userName = req.user.fullName;
+    
+    // Fetch user details first since req.user from authMiddleware only selects id, role, collegeId, isVerified
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, fullName: true }
+    });
+
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const userEmail = targetUser.email;
+    const userName = targetUser.fullName;
 
     await prisma.user.delete({ where: { id: userId } });
 

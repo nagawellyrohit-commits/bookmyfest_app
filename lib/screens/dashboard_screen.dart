@@ -270,13 +270,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Navigator.pop(context); // close confirm dialog
               final token = user.token;
               if (token == null) {
-                user.logout();
+                _logout();
                 return;
               }
               setState(() => _isLoadingData = true);
               try {
                 await _authService.deleteAccount(token);
-                user.logout();
+                _logout();
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -291,7 +291,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     errStr.contains("not found") ||
                     errStr.contains("401") ||
                     errStr.contains("unauthorized")) {
-                  user.logout();
+                  _logout();
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
