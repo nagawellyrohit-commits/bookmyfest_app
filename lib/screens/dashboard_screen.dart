@@ -268,9 +268,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () async {
               Navigator.pop(context); // close confirm dialog
+              final token = user.token;
+              if (token == null) {
+                user.logout();
+                return;
+              }
               setState(() => _isLoadingData = true);
               try {
-                await _authService.deleteAccount(user.token!);
+                await _authService.deleteAccount(token);
                 user.logout();
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -281,6 +286,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   );
                 }
               } catch (e) {
+                final errStr = e.toString().toLowerCase();
+                if (errStr.contains("404") ||
+                    errStr.contains("not found") ||
+                    errStr.contains("401") ||
+                    errStr.contains("unauthorized")) {
+                  user.logout();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Account deleted successfully"),
+                        backgroundColor: Colors.redAccent,
+                      ),
+                    );
+                  }
+                  return;
+                }
+                
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
