@@ -139,8 +139,8 @@ class _SelectLoginScreenState extends State<SelectLoginScreen>
                                 maxHeight: 380,
                                 maxWidth: 360,
                               ),
-                              child: LayoutBuilder(
-                                builder: (context, constraints) {
+                              child: Builder(
+                                builder: (context) {
                                   double W = 300;
                                   double H = 300;
                                   double centerSize = 108;
