@@ -276,12 +276,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               LengthLimitingTextInputFormatter(10),
                             ],
                             decoration: AppTheme.inputDecoration(
-                              labelText: "Phone Number",
+                              labelText: "Phone Number (Optional)",
                               prefixIcon: Icons.phone_outlined,
                             ),
                             validator: (val) {
                               if (val == null || val.isEmpty) {
-                                return "Please enter your phone number";
+                                return null;
                               }
                               if (val.length != 10) {
                                 return "Phone number must be exactly 10 digits";

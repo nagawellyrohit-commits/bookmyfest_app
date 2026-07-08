@@ -31,7 +31,7 @@ class AuthService {
     required String fullName,
     required String email,
     required String password,
-    required String phone,
+    String? phone,
     required String role,
     required String collegeName,
     required String department,
@@ -56,7 +56,7 @@ class AuthService {
         "fullName": fullName.trim(),
         "email": email.trim(),
         "password": password,
-        "phone": phone.trim(),
+        "phone": phone != null && phone.trim().isNotEmpty ? phone.trim() : null,
         "role": role,
         "collegeName": collegeName.trim(),
         "department": department.trim(),
@@ -155,6 +155,27 @@ class AuthService {
     }
   }
 
+  // Delete own account (any role)
+  Future<void> deleteAccount(String token) async {
+    try {
+      final response = await http.delete(
+        Uri.parse("$baseUrl/auth/me"),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode != 200 || responseData['success'] != true) {
+        throw Exception(
+          responseData['message'] ?? 'Failed to delete account',
+        );
+      }
+    } catch (e) {
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
+    }
+  }
+
   // Get pending faculties (Super Admin only)
   Future<List<dynamic>> getPendingFaculties(String token) async {
     try {
@@ -220,7 +241,7 @@ class AuthService {
   Future<Map<String, dynamic>> updateProfile(
     String token, {
     required String fullName,
-    required String phone,
+    String? phone,
     required String department,
     String? studentId,
     String? resumeUrl,
@@ -236,7 +257,7 @@ class AuthService {
     try {
       final payload = {
         "fullName": fullName.trim(),
-        "phone": phone.trim(),
+        "phone": phone != null && phone.trim().isNotEmpty ? phone.trim() : null,
         "department": department.trim(),
         "studentId": studentId?.trim(),
         "resumeUrl": resumeUrl?.trim(),

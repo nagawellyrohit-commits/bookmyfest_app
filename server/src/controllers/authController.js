@@ -666,22 +666,66 @@ export const deleteCoordinator = async (req, res, next) => {
     }
 
     if (isCoordinatorSelf) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { isPendingDeletion: true }
-      });
+      // Delete user immediately to comply with Guideline 5.1.1(v)
+      await prisma.user.delete({ where: { id: userId } });
+
+      // Send confirmation email
+      const emailSubject = 'Account Deleted Successfully';
+      const emailText = `Hello ${targetUser.fullName},\n\nYour CollegeConnect account has been deleted successfully. All your data has been permanently removed.\n\nThank you for using CollegeConnect!`;
+      const emailHtml = `<h3>Account Deleted Successfully</h3><p>Hello <strong>${targetUser.fullName}</strong>,</p><p>Your CollegeConnect account has been deleted successfully. All your data has been permanently removed.</p><p>Thank you for using CollegeConnect!</p>`;
+      
+      sendEmailNotification(targetUser.email, emailSubject, emailText, emailHtml).catch(err => 
+        console.error('[Deletion Email Error]: Failed to send success email:', err)
+      );
+
       return res.status(200).json({
         success: true,
-        message: 'Account deletion request submitted and is pending Faculty Admin approval'
+        message: 'Account deleted successfully'
       });
     }
 
     // Delete user from database
     await prisma.user.delete({ where: { id: userId } });
 
+    // Send confirmation email (coordinator deleted by admin)
+    const emailSubject = 'Account Deleted by Administrator';
+    const emailText = `Hello ${targetUser.fullName},\n\nYour CollegeConnect coordinator account has been deleted by an administrator.\n\nIf you believe this is an error, please contact your faculty coordinator.`;
+    const emailHtml = `<h3>Account Deleted</h3><p>Hello <strong>${targetUser.fullName}</strong>,</p><p>Your CollegeConnect coordinator account has been deleted by an administrator.</p><p>If you believe this is an error, please contact your faculty coordinator.</p>`;
+    
+    sendEmailNotification(targetUser.email, emailSubject, emailText, emailHtml).catch(err => 
+      console.error('[Deletion Email Error]: Failed to send deletion email:', err)
+    );
+
     res.status(200).json({
       success: true,
       message: 'Coordinator deleted successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Delete own account (any role: student, coordinator, faculty_admin, super_admin, guest)
+export const deleteAccount = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const userEmail = req.user.email;
+    const userName = req.user.fullName;
+
+    await prisma.user.delete({ where: { id: userId } });
+
+    // Send confirmation email
+    const emailSubject = 'Account Deleted Successfully';
+    const emailText = `Hello ${userName},\n\nYour CollegeConnect account has been deleted successfully. All your data has been permanently removed.\n\nThank you for using CollegeConnect!`;
+    const emailHtml = `<h3>Account Deleted Successfully</h3><p>Hello <strong>${userName}</strong>,</p><p>Your CollegeConnect account has been deleted successfully. All your data has been permanently removed.</p><p>Thank you for using CollegeConnect!</p>`;
+    
+    sendEmailNotification(userEmail, emailSubject, emailText, emailHtml).catch(err => 
+      console.error('[Deletion Email Error]: Failed to send success email:', err)
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Account deleted successfully'
     });
   } catch (error) {
     next(error);

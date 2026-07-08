@@ -177,7 +177,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _showCoordinatorSettings(BuildContext context, UserProvider user) {
+  void _showAccountSettingsDialog(BuildContext context, UserProvider user) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -205,24 +205,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              "Role: Coordinator",
+              "Role: ${user.role?.replaceAll('_', ' ').toUpperCase()}",
               style: const TextStyle(color: Color(0xFF475569)),
             ),
             const SizedBox(height: 16),
-            if (user.isPendingDeletion)
-              const Text(
-                "Your account deletion request has been submitted and is pending Faculty Coordinator approval. You will remain active until approved.",
-                style: TextStyle(
-                  color: Colors.red,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
-              )
-            else
-              const Text(
-                "Warning: Requesting account deletion requires approval from your college's Faculty Coordinator. You will remain active until approved.",
-                style: TextStyle(color: Colors.red, fontSize: 12),
-              ),
+            const Text(
+              "Warning: Deleting your account is permanent. This will delete all your data and log you out immediately.",
+              style: TextStyle(color: Colors.red, fontSize: 12),
+            ),
           ],
         ),
         actions: [
@@ -233,51 +223,81 @@ class _DashboardScreenState extends State<DashboardScreen> {
               style: TextStyle(color: Color(0xFF64748B)),
             ),
           ),
-          if (!user.isPendingDeletion)
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent),
-              onPressed: () async {
-                Navigator.pop(context); // close dialog
-                setState(() => _isLoadingData = true);
-                try {
-                  await _authService.deleteCoordinator(
-                    user.token!,
-                    user.userId!,
-                  );
-
-                  // Reload the profile data to update user.isPendingDeletion
-                  final freshProfile = await _authService.getMe(user.token!);
-                  freshProfile['college'] = {"name": user.collegeName};
-                  user.setSession(user.token!, freshProfile);
-
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          "Account deletion request submitted. Pending Faculty Admin approval.",
-                        ),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text("Error: $e"),
-                        backgroundColor: AppTheme.accent,
-                      ),
-                    );
-                  }
-                } finally {
-                  setState(() => _isLoadingData = false);
-                }
-              },
-              child: const Text(
-                "Delete Account",
-                style: TextStyle(color: Colors.white),
-              ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () {
+              Navigator.pop(context); // close settings dialog
+              _confirmAccountDeletion(context, user);
+            },
+            child: const Text(
+              "Delete Account",
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmAccountDeletion(BuildContext context, UserProvider user) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          "Confirm Deletion",
+          style: TextStyle(
+            color: Color(0xFF0F172A),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text(
+          "Are you sure you want to permanently delete your account? This action is irreversible and all your profile data, registrations, and attendance will be purged.",
+          style: TextStyle(color: Color(0xFF475569)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              "Cancel",
+              style: TextStyle(color: Color(0xFF64748B)),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () async {
+              Navigator.pop(context); // close confirm dialog
+              setState(() => _isLoadingData = true);
+              try {
+                await _authService.deleteAccount(user.token!);
+                user.logout();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Account deleted successfully"),
+                      backgroundColor: Colors.redAccent,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("Error deleting account: $e"),
+                      backgroundColor: AppTheme.accent,
+                    ),
+                  );
+                }
+              } finally {
+                setState(() => _isLoadingData = false);
+              }
+            },
+            child: const Text(
+              "Permanently Delete",
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
         ],
       ),
     );
@@ -359,14 +379,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 );
               },
             ),
-          if (role == 'coordinator')
+          if (role == 'coordinator' || role == 'faculty_admin' || role == 'super_admin')
             IconButton(
               icon: const Icon(
                 Icons.manage_accounts_rounded,
                 color: Colors.white,
               ),
               tooltip: "Account Settings",
-              onPressed: () => _showCoordinatorSettings(context, user),
+              onPressed: () => _showAccountSettingsDialog(context, user),
             ),
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: Colors.white),
@@ -1450,7 +1470,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ],
                 const SizedBox(height: 24),
-                if (user.role != 'guest')
+                if (user.role != 'guest') ...[
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primary,
@@ -1479,6 +1499,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       }
                     },
                   ),
+                  const SizedBox(height: 12),
+                ],
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    minimumSize: const Size.fromHeight(50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  icon: const Icon(Icons.delete_forever_rounded, color: Colors.white),
+                  label: const Text(
+                    "Delete Account",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  onPressed: () => _confirmAccountDeletion(context, user),
+                ),
               ],
             ),
           ),

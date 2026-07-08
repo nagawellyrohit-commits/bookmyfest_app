@@ -348,6 +348,48 @@ async function runTests() {
     return logFail('Super Admin job profiles list audit', e);
   }
 
+  // 15b. Register Student without a phone number (should succeed)
+  try {
+    const res = await axios.post(`${API_URL}/auth/register`, {
+      fullName: 'No Phone Student',
+      email: `nophone_${timestamp}@test.com`,
+      password: password,
+      role: 'student',
+      collegeName: collegeName,
+      department: 'Computer Science',
+      idProofUrl: 'http://example.com/student-id.png',
+      isFinalYear: false
+    });
+    logSuccess('Registered student without phone number (succeeded)');
+  } catch (e) {
+    return logFail('Registration without phone number', e);
+  }
+
+  // 15c. Student deletes their own account directly
+  try {
+    await axios.delete(`${API_URL}/auth/me`, {
+      headers: { Authorization: `Bearer ${studentToken}` }
+    });
+    logSuccess('Student deleted their own account directly via DELETE /auth/me');
+    
+    // Verify login fails now
+    try {
+      await axios.post(`${API_URL}/auth/login`, {
+        email: studentEmail,
+        password: password
+      });
+      throw new Error('Login succeeded for deleted user');
+    } catch (loginErr) {
+      if (loginErr.response?.status === 401 || loginErr.response?.status === 400) {
+        logSuccess('Verified: Login correctly failed for deleted user');
+      } else {
+        throw loginErr;
+      }
+    }
+  } catch (e) {
+    return logFail('Self-deletion of account', e);
+  }
+
   console.log('--- ALL COLLEGE_CONNECT BACKEND INTEGRATION TESTS PASSED ---');
 }
 

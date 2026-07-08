@@ -13,7 +13,8 @@ import {
   uploadImage,
   forgotPassword,
   verifyResetCode,
-  resetPassword
+  resetPassword,
+  deleteAccount
 } from '../controllers/authController.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 
@@ -31,6 +32,7 @@ router.post('/reset-password', resetPassword);
 // Protected user profile routes (require valid Bearer token)
 router.get('/me', authenticateToken, getMe);
 router.put('/me/profile', authenticateToken, updateProfile);
+router.delete('/me', authenticateToken, deleteAccount);
 
 router.get('/pending-coordinators', authenticateToken, getPendingCoordinators);
 router.post('/coordinators/:userId/verify', authenticateToken, verifyCoordinator);
