@@ -137,6 +137,7 @@ class _SelectLoginScreenState extends State<SelectLoginScreen>
                           double W = 300;
                           double H = 300;
                           double centerSize = 108;
+                          double centerRadius = centerSize / 2;
 
                           return Stack(
                             alignment: Alignment.center,
@@ -189,9 +190,19 @@ class _SelectLoginScreenState extends State<SelectLoginScreen>
                                     ],
                                   ),
                                   child: Stack(
-                                    clipBehavior: Clip.none,
                                     children: [
-                                      // Top-Left: Student Register
+                                      // 1. Grid Lines
+                                      Positioned.fill(
+                                        child: CustomPaint(
+                                          painter: GridLinesPainter(
+                                            color: appBarColor,
+                                            centerRadius: centerRadius,
+                                          ),
+                                        ),
+                                      ),
+
+                                      // 2. Quadrants
+                                      // Top-Left: Faculty
                                       Positioned(
                                         left: 0,
                                         top: 0,
@@ -199,8 +210,8 @@ class _SelectLoginScreenState extends State<SelectLoginScreen>
                                         height: H / 2,
                                         child: _buildQuadrant(
                                           context,
-                                          title: "Student Reg",
-                                          iconData: Icons.person_add_outlined,
+                                          title: "Faculty",
+                                          iconData: Icons.person_outline_rounded,
                                           iconColor: appBarColor,
                                           alignment: const Alignment(-0.2, -0.2),
                                           borderRadius: const BorderRadius.only(
@@ -209,15 +220,17 @@ class _SelectLoginScreenState extends State<SelectLoginScreen>
                                           onTap: () => Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder:
-                                                  (context) =>
-                                                      RegisterScreen(),
+                                              builder: (context) => LoginScreen(
+                                                selectedRole: _getRoleParamValue(
+                                                  "Faculty",
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         ),
                                       ),
 
-                                      // Top-Right: Faculty
+                                      // Top-Right: Coordinator
                                       Positioned(
                                         left: W / 2,
                                         top: 0,
@@ -225,8 +238,8 @@ class _SelectLoginScreenState extends State<SelectLoginScreen>
                                         height: H / 2,
                                         child: _buildQuadrant(
                                           context,
-                                          title: "Faculty",
-                                          iconData: Icons.co_present_outlined,
+                                          title: "Coordinator",
+                                          iconData: Icons.groups_outlined,
                                           iconColor: appBarColor,
                                           alignment: const Alignment(0.2, -0.2),
                                           borderRadius: const BorderRadius.only(
@@ -236,8 +249,9 @@ class _SelectLoginScreenState extends State<SelectLoginScreen>
                                             context,
                                             MaterialPageRoute(
                                               builder: (context) => LoginScreen(
-                                                selectedRole:
-                                                    _getRoleParamValue("Faculty"),
+                                                selectedRole: _getRoleParamValue(
+                                                  "Coordinator",
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -263,8 +277,9 @@ class _SelectLoginScreenState extends State<SelectLoginScreen>
                                             context,
                                             MaterialPageRoute(
                                               builder: (context) => LoginScreen(
-                                                selectedRole:
-                                                    _getRoleParamValue("Guest"),
+                                                selectedRole: _getRoleParamValue(
+                                                  "Guest",
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -291,8 +306,7 @@ class _SelectLoginScreenState extends State<SelectLoginScreen>
                                             context,
                                             MaterialPageRoute(
                                               builder: (context) => LoginScreen(
-                                                selectedRole:
-                                                    _getRoleParamValue(
+                                                selectedRole: _getRoleParamValue(
                                                   "Super Admin",
                                                 ),
                                               ),
