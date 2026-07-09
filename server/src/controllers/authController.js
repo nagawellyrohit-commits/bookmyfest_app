@@ -898,7 +898,19 @@ export const uploadFile = (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Please select a PDF file to upload.' });
     }
 
-    console.log('[Multer upload success] Saved local temp file:', req.file.filename);
+    console.log('[Multer upload success] Saved local file:', req.file.filename);
+
+    // Support Local Storage Option
+    if (process.env.UPLOAD_STORAGE === 'local' || !process.env.CLOUDINARY_API_KEY) {
+      const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+      console.log('[Local Upload Success] Accessible via URL:', fileUrl);
+      return res.status(200).json({
+        success: true,
+        message: 'PDF CV uploaded successfully',
+        fileUrl: fileUrl,
+        fileName: req.file.originalname
+      });
+    }
 
     try {
       console.log('[Cloudinary upload] Uploading resume to Cloudinary:', req.file.path);
@@ -980,7 +992,19 @@ export const uploadImage = (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Please select an image file to upload.' });
     }
 
-    console.log('[Multer image upload success] Saved local temp file:', req.file.filename);
+    console.log('[Multer image upload success] Saved local file:', req.file.filename);
+
+    // Support Local Storage Option
+    if (process.env.UPLOAD_STORAGE === 'local' || !process.env.CLOUDINARY_API_KEY) {
+      const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+      console.log('[Local Image Upload Success] Accessible via URL:', fileUrl);
+      return res.status(200).json({
+        success: true,
+        message: 'Image uploaded successfully',
+        fileUrl: fileUrl,
+        fileName: req.file.originalname
+      });
+    }
 
     try {
       console.log('[Cloudinary upload] Uploading image to Cloudinary:', req.file.path);
