@@ -688,19 +688,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       );
     } else if (role == 'guest') {
-      return NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: _changeTab,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.event_note_rounded),
-            label: "Browse Events",
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline_rounded),
-            label: "Profile",
-          ),
-        ],
+      return Container(
+        height: 80,
+        color: AppTheme.primary,
       );
     }
     return null;
@@ -752,12 +742,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           return _buildSuperAdminJobProfilesTab(user);
       }
     } else if (role == 'guest') {
-      switch (_currentIndex) {
-        case 0:
-          return _buildEventsTab(isStudentView: true);
-        case 1:
-          return _buildStudentProfileTab(user);
-      }
+      return _buildEventsTab(isStudentView: true);
     }
     return const Center(child: Text("Unknown Role Page"));
   }
