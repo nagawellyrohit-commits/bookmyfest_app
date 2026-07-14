@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'login_screen.dart';
 import 'welcome_screen.dart';
-import 'register_screen.dart';
+import 'dashboard_screen.dart';
+import '../providers/user_provider.dart';
+import '../services/auth_service.dart';
 
 class SelectLoginScreen extends StatefulWidget {
   final Color brandColor;
@@ -37,6 +40,65 @@ class _SelectLoginScreenState extends State<SelectLoginScreen>
         return 'guest';
       default:
         return 'student';
+    }
+  }
+
+  bool _isLoading = false;
+
+  void _handleGuestLogin() async {
+    setState(() => _isLoading = true);
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final authService = AuthService();
+      
+      const email = "guest@bookmyfest.co";
+      const password = "guestpassword123";
+      
+      Map<String, dynamic> loginResponse;
+      try {
+        // Attempt to log in with static guest credentials
+        loginResponse = await authService.login(email, password);
+      } catch (e) {
+        // If login fails (user doesn't exist yet), register once behind the scenes
+        await authService.register(
+          fullName: "Guest User",
+          email: email,
+          password: password,
+          role: "guest",
+          collegeName: "",
+          department: "",
+          idProofUrl: "",
+          isFinalYear: false,
+        );
+        // Login again after registration
+        loginResponse = await authService.login(email, password);
+      }
+      
+      final token = loginResponse['data']['token'];
+      final user = loginResponse['data']['user'];
+      
+      userProvider.setSession(token, user);
+      
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const DashboardScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Guest mode failed: ${e.toString()}"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -280,16 +342,7 @@ class _SelectLoginScreenState extends State<SelectLoginScreen>
                                                   borderRadius: const BorderRadius.only(
                                                     bottomLeft: Radius.circular(30),
                                                   ),
-                                                  onTap: () => Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                      builder: (context) => LoginScreen(
-                                                        selectedRole: _getRoleParamValue(
-                                                          "Guest",
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
+                                                  onTap: _handleGuestLogin,
                                                 ),
                                               ),
 
@@ -364,6 +417,37 @@ class _SelectLoginScreenState extends State<SelectLoginScreen>
               },
             ),
           ),
+          if (_isLoading)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black45,
+                child: Center(
+                  child: Card(
+                    color: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(color: widget.brandColor),
+                          const SizedBox(height: 16),
+                          const Text(
+                            "Entering Guest Mode...",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
