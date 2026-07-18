@@ -6,8 +6,6 @@ import multer from 'multer';
 import path from 'path';
 import { createWorker } from 'tesseract.js';
 import fs from 'fs';
-import axios from 'axios';
-import cloudinary from '../config/cloudinary.js';
 
 
 const resetCodes = new Map();
@@ -58,7 +56,6 @@ export const register = async (req, res, next) => {
 
       if (role === 'student' || role === 'coordinator') {
         let localPath = null;
-        let isCloudinary = idProofUrl.includes('cloudinary.com') || idProofUrl.includes('res.cloudinary.com');
         let bypassOcr = idProofUrl === 'http://example.com/student-id.png' ||
                         idProofUrl === 'http://example.com/coord-id.png' ||
                         idProofUrl.includes('test-ocr-bypass');
@@ -68,8 +65,6 @@ export const register = async (req, res, next) => {
         } else if (idProofUrl.includes('/uploads/')) {
           const filename = idProofUrl.split('/uploads/')[1];
           localPath = path.join('uploads', filename);
-        } else if (isCloudinary) {
-          console.log('[OCR Verification] Processing Cloudinary URL for OCR:', idProofUrl);
         } else {
           return res.status(400).json({
             success: false,
@@ -80,11 +75,7 @@ export const register = async (req, res, next) => {
         if (!bypassOcr) {
           try {
             let ocrInput;
-            if (isCloudinary) {
-              console.log(`[OCR Verification] Downloading Cloudinary image for OCR: ${idProofUrl}`);
-              const response = await axios.get(idProofUrl, { responseType: 'arraybuffer' });
-              ocrInput = Buffer.from(response.data);
-            } else if (localPath) {
+            if (localPath) {
               console.log(`[OCR Verification] Performing OCR on local file: ${localPath}`);
               ocrInput = localPath;
             }
@@ -102,7 +93,7 @@ export const register = async (req, res, next) => {
               }
               console.log('[OCR Verification] Success! Matched.');
             } else {
-              throw new Error('No input file or buffer resolved for OCR.');
+              throw new Error('No input file resolved for OCR.');
             }
           } catch (ocrErr) {
             console.error('[OCR Error during registration]:', ocrErr);
@@ -900,51 +891,14 @@ export const uploadFile = (req, res, next) => {
 
     console.log('[Multer upload success] Saved local file:', req.file.filename);
 
-    // Support Local Storage Option
-    if (process.env.UPLOAD_STORAGE === 'local' || !process.env.CLOUDINARY_API_KEY) {
-      const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-      console.log('[Local Upload Success] Accessible via URL:', fileUrl);
-      return res.status(200).json({
-        success: true,
-        message: 'PDF CV uploaded successfully',
-        fileUrl: fileUrl,
-        fileName: req.file.originalname
-      });
-    }
-
-    try {
-      console.log('[Cloudinary upload] Uploading resume to Cloudinary:', req.file.path);
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: 'resumes',
-        resource_type: 'raw',
-        use_filename: true,
-        unique_filename: true
-      });
-
-      console.log('[Cloudinary upload success] Secure URL:', result.secure_url);
-
-      // Clean up local temp file asynchronously
-      fs.promises.unlink(req.file.path).catch((unlinkErr) => {
-        console.error('[Cleanup Error] Failed to delete local temp file:', req.file.path, unlinkErr);
-      });
-
-      res.status(200).json({
-        success: true,
-        message: 'PDF CV uploaded successfully',
-        fileUrl: result.secure_url,
-        fileName: req.file.originalname
-      });
-    } catch (uploadErr) {
-      console.error('[Cloudinary upload error]:', uploadErr);
-      
-      // Cleanup local temp file
-      fs.promises.unlink(req.file.path).catch(() => {});
-
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to upload PDF CV to Cloudinary. Please check Cloudinary configuration.'
-      });
-    }
+    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    console.log('[Local Upload Success] Accessible via URL:', fileUrl);
+    return res.status(200).json({
+      success: true,
+      message: 'PDF CV uploaded successfully',
+      fileUrl: fileUrl,
+      fileName: req.file.originalname
+    });
   });
 };
 
@@ -994,49 +948,14 @@ export const uploadImage = (req, res, next) => {
 
     console.log('[Multer image upload success] Saved local file:', req.file.filename);
 
-    // Support Local Storage Option
-    if (process.env.UPLOAD_STORAGE === 'local' || !process.env.CLOUDINARY_API_KEY) {
-      const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-      console.log('[Local Image Upload Success] Accessible via URL:', fileUrl);
-      return res.status(200).json({
-        success: true,
-        message: 'Image uploaded successfully',
-        fileUrl: fileUrl,
-        fileName: req.file.originalname
-      });
-    }
-
-    try {
-      console.log('[Cloudinary upload] Uploading image to Cloudinary:', req.file.path);
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: 'images',
-        resource_type: 'image'
-      });
-
-      console.log('[Cloudinary upload success] Secure URL:', result.secure_url);
-
-      // Clean up local temp file asynchronously
-      fs.promises.unlink(req.file.path).catch((unlinkErr) => {
-        console.error('[Cleanup Error] Failed to delete local temp file:', req.file.path, unlinkErr);
-      });
-
-      res.status(200).json({
-        success: true,
-        message: 'Image uploaded successfully',
-        fileUrl: result.secure_url,
-        fileName: req.file.originalname
-      });
-    } catch (uploadErr) {
-      console.error('[Cloudinary upload error]:', uploadErr);
-      
-      // Cleanup local temp file
-      fs.promises.unlink(req.file.path).catch(() => {});
-
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to upload image to Cloudinary. Please check Cloudinary configuration.'
-      });
-    }
+    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    console.log('[Local Image Upload Success] Accessible via URL:', fileUrl);
+    return res.status(200).json({
+      success: true,
+      message: 'Image uploaded successfully',
+      fileUrl: fileUrl,
+      fileName: req.file.originalname
+    });
   });
 };
 
