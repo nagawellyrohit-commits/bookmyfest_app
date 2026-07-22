@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/db.js';
-import { sendEmailNotification, sendWhatsAppNotification } from '../utils/notifications.js';
+import { sendEmailNotification, sendWhatsAppNotification, WhatsAppTemplates } from '../utils/notifications.js';
 import multer from 'multer';
 import path from 'path';
 import { createWorker } from 'tesseract.js';
@@ -524,7 +524,12 @@ export const verifyCoordinator = async (req, res, next) => {
 
     sendEmailNotification(updatedUser.email, welcomeSubject, welcomeMsg, welcomeMsgHtml);
     if (updatedUser.phone) {
-      sendWhatsAppNotification(updatedUser.phone, welcomeMsg);
+      sendWhatsAppNotification(
+        updatedUser.phone,
+        welcomeMsg,
+        WhatsAppTemplates.COORDINATOR_APPROVED,
+        [updatedUser.fullName, updatedUser.email]
+      );
     }
 
     res.status(200).json({
@@ -618,7 +623,12 @@ export const verifyFaculty = async (req, res, next) => {
 
     sendEmailNotification(updatedUser.email, welcomeSubject, welcomeMsg, welcomeMsgHtml);
     if (updatedUser.phone) {
-      sendWhatsAppNotification(updatedUser.phone, welcomeMsg);
+      sendWhatsAppNotification(
+        updatedUser.phone,
+        welcomeMsg,
+        WhatsAppTemplates.COORDINATOR_APPROVED,
+        [updatedUser.fullName, updatedUser.email]
+      );
     }
 
     res.status(200).json({
@@ -662,12 +672,17 @@ export const deleteCoordinator = async (req, res, next) => {
 
       // Send confirmation email
       const emailSubject = 'Account Deleted Successfully';
-      const emailText = `Hello ${targetUser.fullName},\n\nYour CollegeConnect account has been deleted successfully. All your data has been permanently removed.\n\nThank you for using CollegeConnect!`;
-      const emailHtml = `<h3>Account Deleted Successfully</h3><p>Hello <strong>${targetUser.fullName}</strong>,</p><p>Your CollegeConnect account has been deleted successfully. All your data has been permanently removed.</p><p>Thank you for using CollegeConnect!</p>`;
+      const emailText = `Hello ${targetUser.fullName},\n\nYour BookMyFest account has been deleted successfully. All your data has been permanently removed.\n\nThank you for using BookMyFest!`;
+      const emailHtml = `<h3>Account Deleted Successfully</h3><p>Hello <strong>${targetUser.fullName}</strong>,</p><p>Your BookMyFest account has been deleted successfully. All your data has been permanently removed.</p><p>Thank you for using BookMyFest!</p>`;
       
       sendEmailNotification(targetUser.email, emailSubject, emailText, emailHtml).catch(err => 
         console.error('[Deletion Email Error]: Failed to send success email:', err)
       );
+      if (targetUser.phone) {
+        sendWhatsAppNotification(targetUser.phone, emailText).catch(err =>
+          console.error('[Deletion WhatsApp Error]: Failed to send success WhatsApp:', err)
+        );
+      }
 
       return res.status(200).json({
         success: true,
@@ -680,12 +695,17 @@ export const deleteCoordinator = async (req, res, next) => {
 
     // Send confirmation email (coordinator deleted by admin)
     const emailSubject = 'Account Deleted by Administrator';
-    const emailText = `Hello ${targetUser.fullName},\n\nYour CollegeConnect coordinator account has been deleted by an administrator.\n\nIf you believe this is an error, please contact your faculty coordinator.`;
-    const emailHtml = `<h3>Account Deleted</h3><p>Hello <strong>${targetUser.fullName}</strong>,</p><p>Your CollegeConnect coordinator account has been deleted by an administrator.</p><p>If you believe this is an error, please contact your faculty coordinator.</p>`;
+    const emailText = `Hello ${targetUser.fullName},\n\nYour BookMyFest coordinator account has been deleted by an administrator.\n\nIf you believe this is an error, please contact your faculty coordinator.`;
+    const emailHtml = `<h3>Account Deleted</h3><p>Hello <strong>${targetUser.fullName}</strong>,</p><p>Your BookMyFest coordinator account has been deleted by an administrator.</p><p>If you believe this is an error, please contact your faculty coordinator.</p>`;
     
     sendEmailNotification(targetUser.email, emailSubject, emailText, emailHtml).catch(err => 
       console.error('[Deletion Email Error]: Failed to send deletion email:', err)
     );
+    if (targetUser.phone) {
+      sendWhatsAppNotification(targetUser.phone, emailText).catch(err =>
+        console.error('[Deletion WhatsApp Error]: Failed to send deletion WhatsApp:', err)
+      );
+    }
 
     res.status(200).json({
       success: true,
@@ -704,7 +724,7 @@ export const deleteAccount = async (req, res, next) => {
     // Fetch user details first since req.user from authMiddleware only selects id, role, collegeId, isVerified
     const targetUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true, fullName: true }
+      select: { email: true, fullName: true, phone: true }
     });
 
     if (!targetUser) {
@@ -718,12 +738,17 @@ export const deleteAccount = async (req, res, next) => {
 
     // Send confirmation email
     const emailSubject = 'Account Deleted Successfully';
-    const emailText = `Hello ${userName},\n\nYour CollegeConnect account has been deleted successfully. All your data has been permanently removed.\n\nThank you for using CollegeConnect!`;
-    const emailHtml = `<h3>Account Deleted Successfully</h3><p>Hello <strong>${userName}</strong>,</p><p>Your CollegeConnect account has been deleted successfully. All your data has been permanently removed.</p><p>Thank you for using CollegeConnect!</p>`;
+    const emailText = `Hello ${userName},\n\nYour BookMyFest account has been deleted successfully. All your data has been permanently removed.\n\nThank you for using BookMyFest!`;
+    const emailHtml = `<h3>Account Deleted Successfully</h3><p>Hello <strong>${userName}</strong>,</p><p>Your BookMyFest account has been deleted successfully. All your data has been permanently removed.</p><p>Thank you for using BookMyFest!</p>`;
     
     sendEmailNotification(userEmail, emailSubject, emailText, emailHtml).catch(err => 
       console.error('[Deletion Email Error]: Failed to send success email:', err)
     );
+    if (targetUser.phone) {
+      sendWhatsAppNotification(targetUser.phone, emailText).catch(err =>
+        console.error('[Deletion WhatsApp Error]: Failed to send success WhatsApp:', err)
+      );
+    }
 
     res.status(200).json({
       success: true,
@@ -822,6 +847,14 @@ export const updateProfile = async (req, res, next) => {
     }
 
     const { passwordHash: _, ...userWithoutPassword } = updatedUser;
+    // Send a confirmation WhatsApp message if phone number was added/updated
+    if (phone && phone.trim() !== currentUser.phone) {
+      sendWhatsAppNotification(
+        phone,
+        `📱 *BookMyFest Notifications Enabled*\n\nHello ${updatedUser.fullName}, your phone number has been linked to your BookMyFest account! You will now receive all event alerts and notifications on WhatsApp.`
+      ).catch(err => console.error('[Profile Update WhatsApp Error]:', err));
+    }
+
     res.status(200).json({
       success: true,
       message: 'Profile updated successfully',

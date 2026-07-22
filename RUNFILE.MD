@@ -1,4 +1,4 @@
-# CollegeConnect Run Guide
+# BookMyFest Run Guide
 
 This guide details how to start the backend server, Prisma database studio, and launch the Flutter app on iOS and Android emulators from scratch.
 

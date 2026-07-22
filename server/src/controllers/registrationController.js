@@ -1,6 +1,6 @@
 import prisma from '../config/db.js';
 import { logAudit } from '../utils/dbHelper.js';
-import { sendEmailNotification, sendWhatsAppNotification } from '../utils/notifications.js';
+import { sendEmailNotification, sendWhatsAppNotification, WhatsAppTemplates } from '../utils/notifications.js';
 
 // Register a user for an event
 export const registerForEvent = async (req, res, next) => {
@@ -92,21 +92,42 @@ export const registerForEvent = async (req, res, next) => {
     // 6. Send notification alerts
     const subject = `Registration Update: ${event.title}`;
     let messageText = '';
+    let whatsapp_template = '';
 
-    if (paymentStatus === 'free_event') {
-      messageText = `Hello ${registration.user.fullName},\n\nYour registration for the event "${event.title}" is confirmed! We look forward to seeing you.`;
-    } else {
+    // Decide which WhatsApp template name and text content to send based on event.isPaid
+    if (event.isPaid) {
+      whatsapp_template = WhatsAppTemplates.REGISTRATION_RECEIVED;
       messageText = `Hello ${registration.user.fullName},\n\nWe have received your registration for the paid event "${event.title}". Your registration is PENDING confirmation of your payment reference: ${paymentReference}. You will receive another alert once approved.`;
+    } else {
+      whatsapp_template = WhatsAppTemplates.REGISTRATION_CONFIRMED;
+      messageText = `Hello ${registration.user.fullName},\n\nYour registration for the event "${event.title}" is confirmed! We look forward to seeing you.`;
     }
 
     if (event.whatsAppGroupLink) {
       messageText += `\n\nPlease join the WhatsApp group to stay in touch: ${event.whatsAppGroupLink}`;
     }
 
-    // Async notify
-    sendEmailNotification(registration.user.email, subject, messageText);
+    // Async notify (Regular email notification without templates)
+    await sendEmailNotification(
+      registration.user.email,
+      subject,
+      messageText
+    );
+
     if (registration.user.phone) {
-      sendWhatsAppNotification(registration.user.phone, messageText);
+      const templateParams = [
+        registration.user.fullName,
+        event.title,
+        event.college?.name || 'BookMyFest',
+        event.isPaid ? paymentReference : `REG-${registration.id.slice(0, 8).toUpperCase()}`
+      ];
+
+      await sendWhatsAppNotification(
+        registration.user.phone,
+        messageText,
+        whatsapp_template,
+        templateParams
+      );
     }
 
     res.status(201).json({
@@ -197,7 +218,10 @@ export const confirmRegistrationPayment = async (req, res, next) => {
 
   try {
     // 1. Fetch Event & Registration
-    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      include: { college: true }
+    });
     if (!event) {
       return res.status(404).json({ success: false, message: 'Event not found' });
     }
@@ -250,9 +274,26 @@ export const confirmRegistrationPayment = async (req, res, next) => {
     const subject = `Payment Confirmed: ${event.title}`;
     const confirmationText = `Hello ${registration.user.fullName},\n\nGood news! Your payment for "${event.title}" has been verified. Your registration is now officially CONFIRMED.`;
 
-    sendEmailNotification(registration.user.email, subject, confirmationText);
+    await sendEmailNotification(
+      registration.user.email,
+      subject,
+      confirmationText
+    );
+
     if (registration.user.phone) {
-      sendWhatsAppNotification(registration.user.phone, confirmationText);
+      const templateParams = [
+        registration.user.fullName,
+        event.title,
+        event.college?.name || 'BookMyFest',
+        `REG-${registration.id.slice(0, 8).toUpperCase()}`
+      ];
+
+      await sendWhatsAppNotification(
+        registration.user.phone,
+        confirmationText,
+        WhatsAppTemplates.PAYMENT_CONFIRMED,
+        templateParams
+      );
     }
 
     res.status(200).json({

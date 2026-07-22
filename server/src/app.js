@@ -1,3 +1,5 @@
+import whatsappRoutes from './routes/whatsapproutes.js';
+import whatsappWebhook from './routes/whatsappwebhook.js';
 import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
@@ -34,6 +36,8 @@ app.use('/api/events', attendanceRoutes);
 app.use('/api/events', certificateRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/sponsors', sponsorRoutes);
+app.use('/api/whatsapp/webhook', whatsappWebhook);
+app.use('/api/whatsapp', whatsappRoutes);
 
 // Catch-all 404 route
 app.use((req, res) => {

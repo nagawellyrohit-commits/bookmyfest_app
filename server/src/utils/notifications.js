@@ -20,14 +20,14 @@ const createMailTransporter = () => {
     };
   }
 
-  const host = cleanEnvVar(process.env.SMTP_HOST) || 'smtp.mailtrap.io';
-  const port = parseInt(cleanEnvVar(process.env.SMTP_PORT) || '2525');
+  const host = cleanEnvVar(process.env.SMTP_HOST);
+  const port = parseInt(cleanEnvVar(process.env.SMTP_PORT));
   const pass = cleanEnvVar(process.env.SMTP_PASS);
 
   return nodemailer.createTransport({
     host: host,
     port: port,
-    secure: true,
+    secure: false,
     auth: {
       user: smtpUser,
       pass: pass,
@@ -106,19 +106,19 @@ export const getEmailTemplate = (subject, contentHtml) => {
  */
 const processEmailBody = (subject, html, text) => {
   let contentHtml = '';
-  
+
   if (html) {
     let cleaned = html;
-    
+
     // Clean old container div
     cleaned = cleaned.replace(/<div style="font-family:\s*[^>]*max-width:\s*600px;[^>]*">/, '');
-    
+
     // Clean old welcome header
     cleaned = cleaned.replace(/<div style="text-align:\s*center;\s*border-bottom:\s*2px[^>]*">[\s\S]*?<\/div>/, '');
-    
+
     // Clean old reset header
     cleaned = cleaned.replace(/<h2 style="color:\s*#4f46e5;\s*text-align:\s*center;">Reset Your Password<\/h2>/, '');
-    
+
     // Clean old footer div
     cleaned = cleaned.replace(/<div style="text-align:\s*center;\s*margin-top:\s*30px;[\s\S]*?<\/div>\s*<\/div>\s*$/, '');
     cleaned = cleaned.replace(/<hr style="border:\s*0;\s*border-top:\s*1px\s*solid\s*#e2e8f0;\s*margin:\s*20px\s*0;"\s*\/>\s*<p style="font-size:\s*12px;\s*color:\s*#64748b;\s*text-align:\s*center;">&copy;\s*BookmyFest\.\s*All\s*rights\s*reserved\.<\/p>\s*<\/div>\s*$/, '');
@@ -128,11 +128,11 @@ const processEmailBody = (subject, html, text) => {
     if (cleaned.endsWith('</div>')) {
       cleaned = cleaned.substring(0, cleaned.length - 6).trim();
     }
-    
+
     // Replace old indigo colors with BookMyFest brand magenta
     cleaned = cleaned.replace(/#4f46e5/g, '#9708AA');
     cleaned = cleaned.replace(/#6366f1/g, '#9708AA');
-    
+
     contentHtml = cleaned;
   } else if (text) {
     contentHtml = text
@@ -142,7 +142,7 @@ const processEmailBody = (subject, html, text) => {
   } else {
     contentHtml = '<p>No content provided.</p>';
   }
-  
+
   return getEmailTemplate(subject, contentHtml);
 };
 
@@ -152,11 +152,12 @@ const processEmailBody = (subject, html, text) => {
  * @param {string} subject - Email subject
  * @param {string} text - Plain text body
  * @param {string} html - HTML body (optional)
+ * @param {string|null} templateName - Optional email template name
  */
-export const sendEmailNotification = async (to, subject, text, html = '') => {
+export const sendEmailNotification = async (to, subject, text, html = '', templateName = null) => {
   const brevoApiKey = cleanEnvVar(process.env.BREVO_API_KEY);
-  const fromEmail = cleanEnvVar(process.env.SMTP_FROM) || 'no-reply@bookmyfest.co';
-  
+  const fromEmail = cleanEnvVar(process.env.SMTP_FROM);
+
   const formattedHtml = processEmailBody(subject, html, text);
 
   if (brevoApiKey) {
@@ -204,42 +205,145 @@ export const sendEmailNotification = async (to, subject, text, html = '') => {
   }
 };
 
+export const WhatsAppTemplates = {
+  REGISTRATION_RECEIVED: "registration_received",
+  REGISTRATION_CONFIRMED: "registration_confirmed",
+  PAYMENT_CONFIRMED: "payment_confirmed",
+  PAYMENT_FAILED: "payment_failed",
+  EVENT_REMINDER: "event_reminder",
+  CERTIFICATE_READY: "certificate_ready",
+  OTP_VERIFICATION: "otp_verification",
+  EVENT_PENDING_APPROVAL: "event_pending_approval",
+  EVENT_APPROVED: "event_approved",
+  EVENT_CREATION_REJECTED: "event_creation_rejected",
+  EVENT_UPDATE_REJECTED: "event_update_rejected",
+  COORDINATOR_APPROVED: "coordinator_approved",
+};
+
 /**
- * Send a WhatsApp message notification
+ * Send a WhatsApp message notification using plain text or Meta Template
  * @param {string} toPhone - Recipient phone number with country code (e.g., "+919876543210")
  * @param {string} message - Message text body
+ * @param {string|null} templateName - Optional Meta template name
+ * @param {Array<string|number>} templateParams - Array of body parameter values
  */
-export const sendWhatsAppNotification = async (toPhone, message) => {
-  // If API credentials are placeholders, fallback to console logging
-  if (process.env.WHATSAPP_AUTH_TOKEN === 'auth_token_placeholder') {
-    console.log(`[MOCK WHATSAPP SENT] To: ${toPhone} | Message: ${message}`);
-    return { success: true, messageId: 'mock-whatsapp-id' };
-  }
-
+export const sendWhatsAppNotification = async (toPhone, message, templateName = null, templateParams = []) => {
+  let phone = "";
   try {
-    // Standard Twilio WhatsApp send endpoint setup (adaptable for Meta Cloud API or local BSPs)
-    const url = process.env.WHATSAPP_API_URL;
-    const token = process.env.WHATSAPP_AUTH_TOKEN;
-    const from = process.env.WHATSAPP_FROM_NUMBER || 'whatsapp:+14155238886';
+    if (!toPhone) {
+      throw new Error("Recipient phone number is missing.");
+    }
+    // Remove all non-digits
+    phone = toPhone.toString().replace(/\D/g, "");
+    if (!phone) {
+      throw new Error("Recipient phone number is invalid.");
+    }
+    // Auto-prepend Indian country code '91' if 10-digit mobile number is entered
+    if (phone.length === 10) {
+      phone = `91${phone}`;
+    }
 
-    const authHeader = Buffer.from(`AC_placeholder:${token}`).toString('base64'); // Twilio uses Basic Auth username:password
+    const payload = {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: phone,
+    };
 
-    const data = new URLSearchParams();
-    data.append('To', `whatsapp:${toPhone}`);
-    data.append('From', from);
-    data.append('Body', message);
+    if (templateName) {
+      payload.type = "template";
+      payload.template = {
+        name: templateName,
+        language: {
+          code: "en"
+        }
+      };
 
-    const response = await axios.post(url, data, {
-      headers: {
-        'Authorization': `Basic ${authHeader}`,
-        'Content-Type': 'application/x-www-form-urlencoded'
+      if (templateParams && templateParams.length > 0) {
+        payload.template.components = [
+          {
+            type: "body",
+            parameters: templateParams.map(param => ({
+              type: "text",
+              text: String(param)
+            }))
+          }
+        ];
       }
-    });
+    } else {
+      payload.type = "text";
+      payload.text = {
+        body: message,
+      };
+    }
 
-    console.log(`[WhatsApp Sent] ID: ${response.data.sid || 'sent'}`);
-    return { success: true, messageId: response.data.sid };
+    console.log(`\n--- [WhatsApp Outbound Notification] ---`);
+    console.log(`Recipient: +${phone}`);
+    console.log(`Type: ${templateName ? "Template" : "Text"}`);
+    if (templateName) {
+      console.log(`Template Name: ${templateName}`);
+      console.log(`Parameters:`, templateParams);
+    } else {
+      console.log(`Body:\n${message}`);
+    }
+
+    const response = await axios.post(
+      `${process.env.WHATSAPP_API_URL}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const messageId = response.data.messages?.[0]?.id || "N/A";
+    console.log(`Status: Success`);
+    console.log(`HTTP Status: ${response.status}`);
+    console.log(`Meta Message ID: ${messageId}`);
+    console.log(`----------------------------------------\n`);
+
+    return {
+      success: true,
+      data: response.data,
+    };
   } catch (error) {
-    console.error('[WhatsApp Failed]', error.response?.data || error.message);
-    return { success: false, error: error.message };
+    const errorData = error.response?.data || error.message;
+    console.error(`\n--- [WhatsApp Outbound Notification FAILED] ---`);
+    console.error(`Recipient: +${phone || toPhone}`);
+    console.error(`Type: ${templateName ? `Template (${templateName})` : "Text"}`);
+    console.error(`Status: Failed`);
+    console.error(`HTTP Status: ${error.response?.status || "N/A"}`);
+    console.error(`Error details:`, JSON.stringify(errorData));
+    console.error(`-----------------------------------------------\n`);
+
+    return {
+      success: false,
+      error: errorData,
+    };
   }
+};
+
+/**
+ * Send notification to both Email and WhatsApp (if phone is provided)
+ * @param {Object} options
+ * @param {string} [options.email] - Recipient email address
+ * @param {string} [options.phone] - Recipient phone number
+ * @param {string} options.subject - Email subject / WhatsApp title header
+ * @param {string} options.text - Plain text message
+ * @param {string} [options.html] - HTML body for email
+ */
+export const sendDualNotification = async ({ email, phone, subject, text, html = '' }) => {
+  const promises = [];
+
+  if (email) {
+    promises.push(sendEmailNotification(email, subject, text, html));
+  }
+
+  if (phone) {
+    const whatsappMsg = subject ? `📌 *${subject}*\n\n${text}` : text;
+    promises.push(sendWhatsAppNotification(phone, whatsappMsg));
+  }
+
+  return Promise.allSettled(promises);
 };

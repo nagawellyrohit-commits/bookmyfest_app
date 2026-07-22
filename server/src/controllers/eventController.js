@@ -2,7 +2,7 @@ import prisma from '../config/db.js';
 import { Prisma } from '@prisma/client';
 import crypto from 'crypto';
 import { logAudit } from '../utils/dbHelper.js';
-import { sendEmailNotification } from '../utils/notifications.js';
+import { sendEmailNotification, sendWhatsAppNotification, WhatsAppTemplates } from '../utils/notifications.js';
 
 // Create a new event
 export const createEvent = async (req, res, next) => {
@@ -107,7 +107,8 @@ export const createEvent = async (req, res, next) => {
           },
           select: {
             email: true,
-            fullName: true
+            fullName: true,
+            phone: true
           }
         });
         for (const faculty of faculties) {
@@ -117,6 +118,14 @@ export const createEvent = async (req, res, next) => {
                         <p>Coordinator <strong>${coordinatorName}</strong> has created a new event <strong>"${event.title}"</strong> and it is pending your approval.</p>
                         <p>Please log in to review and approve this event.</p>`;
           sendEmailNotification(faculty.email, subject, text, html).catch(err => console.error("Error sending email to faculty:", err));
+          if (faculty.phone) {
+            sendWhatsAppNotification(
+              faculty.phone,
+              text,
+              WhatsAppTemplates.EVENT_PENDING_APPROVAL,
+              [faculty.fullName, coordinatorName, event.title]
+            ).catch(err => console.error("Error sending WhatsApp to faculty:", err));
+          }
         }
       } catch (err) {
         console.error("Error sending event creation email notification to faculties:", err);
@@ -160,7 +169,7 @@ export const getAllEvents = async (req, res, next) => {
       whereClause.isApproved = true;
     }
 
-    const events = await prisma.event.findMany({
+    const allEvents = await prisma.event.findMany({
       where: whereClause,
       include: {
         college: {
@@ -177,15 +186,30 @@ export const getAllEvents = async (req, res, next) => {
         _count: {
           select: { registrations: true }
         }
-      },
-      orderBy: {
-        eventDate: 'asc'
       }
     });
 
+    // Smart 2-Tier Event Sorting:
+    // 1. Top Section: Up to 4 events posted within the last 3 days (newest created first)
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+    const recentEvents = allEvents
+      .filter(e => new Date(e.createdAt) >= threeDaysAgo)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    const topRecentEvents = recentEvents.slice(0, 4);
+    const topRecentIds = new Set(topRecentEvents.map(e => e.id));
+
+    // 2. Main Section: All other events sorted by upcoming eventDate (soonest event date first)
+    const remainingEvents = allEvents
+      .filter(e => !topRecentIds.has(e.id))
+      .sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate));
+
+    // Combine top recent releases + remaining events by event date
+    const sortedEvents = [...topRecentEvents, ...remainingEvents];
+
     res.status(200).json({
       success: true,
-      data: events
+      data: sortedEvents
     });
   } catch (error) {
     next(error);
@@ -354,7 +378,8 @@ export const updateEvent = async (req, res, next) => {
           },
           select: {
             email: true,
-            fullName: true
+            fullName: true,
+            phone: true
           }
         });
         const eventTitle = updatedEvent.title || existingEvent.title;
@@ -373,6 +398,14 @@ export const updateEvent = async (req, res, next) => {
                <p>Coordinator <strong>${coordinatorName}</strong> has edited the event <strong>"${eventTitle}"</strong>.</p>
                <p>Please log in to review and approve/reject these updates.</p>`;
           sendEmailNotification(faculty.email, subject, text, html).catch(err => console.error("Error sending email to faculty:", err));
+          if (faculty.phone) {
+            sendWhatsAppNotification(
+              faculty.phone,
+              text,
+              WhatsAppTemplates.EVENT_PENDING_APPROVAL,
+              [faculty.fullName, coordinatorName, eventTitle]
+            ).catch(err => console.error("Error sending WhatsApp to faculty:", err));
+          }
         }
       } catch (err) {
         console.error("Error sending event edit email notification to faculties:", err);
@@ -606,7 +639,8 @@ export const approveEventUpdate = async (req, res, next) => {
         },
         select: {
           email: true,
-          fullName: true
+          fullName: true,
+          phone: true
         }
       });
       const eventTitle = updatedEvent.title || event.title;
@@ -625,6 +659,14 @@ export const approveEventUpdate = async (req, res, next) => {
              <p>The event <strong>"${eventTitle}"</strong> has been approved and published by <strong>${actorName}</strong>.</p>
              <p>You can now view the event on BookMyFest.</p>`;
         sendEmailNotification(coord.email, subject, text, html).catch(err => console.error("Error sending email to coordinator:", err));
+        if (coord.phone) {
+          sendWhatsAppNotification(
+            coord.phone,
+            text,
+            WhatsAppTemplates.EVENT_APPROVED,
+            [coord.fullName, eventTitle, actorName]
+          ).catch(err => console.error("Error sending WhatsApp to coordinator:", err));
+        }
       }
     } catch (err) {
       console.error("Error sending event update approval email notification to coordinators:", err);
@@ -680,7 +722,7 @@ export const rejectEventUpdate = async (req, res, next) => {
         }
       });
 
-      // Send email notifications to coordinators of the same college
+      // Send email & WhatsApp notifications to coordinators of the same college
       try {
         const coordinators = await prisma.user.findMany({
           where: {
@@ -690,7 +732,8 @@ export const rejectEventUpdate = async (req, res, next) => {
           },
           select: {
             email: true,
-            fullName: true
+            fullName: true,
+            phone: true
           }
         });
         const eventTitle = event.title;
@@ -701,6 +744,14 @@ export const rejectEventUpdate = async (req, res, next) => {
                         <p>The request to create/publish the event <strong>"${eventTitle}"</strong> has been rejected/discarded by <strong>${actorName}</strong>.</p>
                         <p><strong>Reason/Modifications requested:</strong> ${finalReason}</p>`;
           sendEmailNotification(coord.email, subject, text, html).catch(err => console.error("Error sending email to coordinator:", err));
+          if (coord.phone) {
+            sendWhatsAppNotification(
+              coord.phone,
+              text,
+              WhatsAppTemplates.EVENT_CREATION_REJECTED,
+              [coord.fullName, eventTitle, finalReason, actorName]
+            ).catch(err => console.error("Error sending WhatsApp to coordinator:", err));
+          }
         }
       } catch (err) {
         console.error("Error sending event creation rejection email notification to coordinators:", err);
@@ -721,7 +772,7 @@ export const rejectEventUpdate = async (req, res, next) => {
       }
     });
 
-    // Send email notifications to coordinators of the same college
+    // Send email & WhatsApp notifications to coordinators of the same college
     try {
       const coordinators = await prisma.user.findMany({
         where: {
@@ -731,17 +782,26 @@ export const rejectEventUpdate = async (req, res, next) => {
         },
         select: {
           email: true,
-          fullName: true
+          fullName: true,
+          phone: true
         }
       });
       const eventTitle = event.title;
       for (const coord of coordinators) {
         const subject = `Event Update Rejected: ${eventTitle}`;
-        const text = `Hello ${coord.fullName},\n\nThe proposed updates for the event "${eventTitle}" have been rejected/discarded by ${actorName}.\n\nReason/Modifications:\n${finalReason}`;
+        const text = `Hello ${coord.fullName},\n\nThe proposed updates for the event "${eventTitle}" were rejected by ${actorName}.\n\nReason/Modifications:\n${finalReason}`;
         const html = `<p>Hello <strong>${coord.fullName}</strong>,</p>
-                      <p>The proposed updates for the event <strong>"${eventTitle}"</strong> have been rejected/discarded by <strong>${actorName}</strong>.</p>
-                      <p><strong>Reason/Modifications requested:</strong> ${finalReason}</p>`;
+                      <p>The proposed updates for the event <strong>"${eventTitle}"</strong> were rejected by <strong>${actorName}</strong>.</p>
+                      <p><strong>Reason/Modifications:</strong> ${finalReason}</p>`;
         sendEmailNotification(coord.email, subject, text, html).catch(err => console.error("Error sending email to coordinator:", err));
+        if (coord.phone) {
+          sendWhatsAppNotification(
+            coord.phone,
+            text,
+            WhatsAppTemplates.EVENT_UPDATE_REJECTED,
+            [coord.fullName, eventTitle, finalReason, actorName]
+          ).catch(err => console.error("Error sending WhatsApp to coordinator:", err));
+        }
       }
     } catch (err) {
       console.error("Error sending event update rejection email notification to coordinators:", err);
