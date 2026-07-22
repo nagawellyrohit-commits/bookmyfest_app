@@ -11,9 +11,11 @@ import certificateRoutes from './routes/certificateRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import sponsorRoutes from './routes/sponsorRoutes.js';
 
+import { uploadPath } from './config/storage.js';
+
 // Ensure uploads directory exists
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads');
+if (!fs.existsSync(uploadPath)) {
+  fs.mkdirSync(uploadPath, { recursive: true });
 }
 
 const app = express();
@@ -21,7 +23,7 @@ const app = express();
 // Standard middleware
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(uploadPath));
 
 // Root health API
 app.get('/api/health', (req, res) => {

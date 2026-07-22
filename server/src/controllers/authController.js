@@ -6,6 +6,7 @@ import multer from 'multer';
 import path from 'path';
 import { createWorker } from 'tesseract.js';
 import fs from 'fs';
+import { uploadPath } from '../config/storage.js';
 
 
 const resetCodes = new Map();
@@ -64,7 +65,7 @@ export const register = async (req, res, next) => {
           console.log('[OCR Verification] Bypassing OCR validation for test/mock URL:', idProofUrl);
         } else if (idProofUrl.includes('/uploads/')) {
           const filename = idProofUrl.split('/uploads/')[1];
-          localPath = path.join('uploads', filename);
+          localPath = path.join(uploadPath, filename);
         } else {
           return res.status(400).json({
             success: false,
@@ -871,7 +872,7 @@ export const updateProfile = async (req, res, next) => {
 // Multer Storage Configuration
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/');
+    cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
