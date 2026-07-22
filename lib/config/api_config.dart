@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 class ApiConfig {
   // Define your backend URL here.
   // Replace this with your Render URL (e.g. "https://college-connect-api.onrender.com/api") to go live!
-  static const String _productionBaseUrl = "http://38.49.212.126:5001/api";
+  static const String _productionBaseUrl = "https://api.bookmyfest.co/api";
 
   static String get baseUrl {
     if (_productionBaseUrl.isNotEmpty) {
