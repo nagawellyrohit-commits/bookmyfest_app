@@ -206,6 +206,7 @@ export const sendEmailNotification = async (to, subject, text, html = '', templa
 };
 
 export const WhatsAppTemplates = {
+  ACCOUNT_CREATED: "account_created",
   REGISTRATION_RECEIVED: "registration_received",
   REGISTRATION_CONFIRMED: "registration_confirmed",
   PAYMENT_CONFIRMED: "payment_confirmed",

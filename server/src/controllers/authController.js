@@ -334,7 +334,18 @@ export const register = async (req, res, next) => {
     if (welcomeSubject) {
       sendEmailNotification(email, welcomeSubject, welcomeMsg, welcomeMsgHtml);
       if (phone) {
-        sendWhatsAppNotification(phone, welcomeMsg);
+        let displayRole = 'Student';
+        if (role === 'coordinator') displayRole = 'Coordinator';
+        else if (role === 'faculty_admin') displayRole = 'Faculty';
+        else if (role === 'guest') displayRole = 'Guest';
+        else if (role) displayRole = role.charAt(0).toUpperCase() + role.slice(1);
+
+        sendWhatsAppNotification(
+          phone,
+          welcomeMsg,
+          WhatsAppTemplates.ACCOUNT_CREATED,
+          [fullName, displayRole]
+        ).catch(err => console.error('[Registration Welcome WhatsApp Error]:', err));
       }
     }
 
