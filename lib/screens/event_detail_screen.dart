@@ -1933,23 +1933,29 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                   ),
                   icon: const Icon(Icons.chat_bubble_outline),
                   label: const Text("Join Official WhatsApp Group"),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        backgroundColor: AppTheme.surface,
-                        title: const Text("WhatsApp Group"),
-                        content: SelectableText(
-                          "Join the group at: ${ev['whatsAppGroupLink']}",
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text("Close"),
-                          ),
-                        ],
-                      ),
-                    );
+                  onPressed: () async {
+                    String url = ev['whatsAppGroupLink'].toString().trim();
+                    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                      url = "https://$url";
+                    }
+                    try {
+                      final uri = Uri.parse(url);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      } else {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Could not open WhatsApp group link")),
+                          );
+                        }
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Invalid link format: $url")),
+                        );
+                      }
+                    }
                   },
                 ),
               ],
@@ -1966,23 +1972,29 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                   label: Text(
                     "Download Brochure (${ev['brochurePages'] ?? 0} Pages)",
                   ),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        backgroundColor: AppTheme.surface,
-                        title: const Text("Event Brochure"),
-                        content: SelectableText(
-                          "View brochure PDF at: ${ev['brochureUrl']}",
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text("Close"),
-                          ),
-                        ],
-                      ),
-                    );
+                  onPressed: () async {
+                    String url = ev['brochureUrl'].toString().trim();
+                    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                      url = "https://$url";
+                    }
+                    try {
+                      final uri = Uri.parse(url);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      } else {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Could not open brochure link")),
+                          );
+                        }
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Invalid link format: $url")),
+                        );
+                      }
+                    }
                   },
                 ),
               ],

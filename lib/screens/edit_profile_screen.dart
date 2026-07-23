@@ -17,6 +17,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _authService = AuthService();
   bool _isLoading = true;
+  bool _whatsappEnabled = true;
   bool _isSaving = false;
   bool _isUploadingResume = false;
   String? _uploadedResumeName;
@@ -69,6 +70,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       // Update basic fields
       _fullNameController.text = profile['fullName'] ?? '';
       _phoneController.text = profile['phone'] ?? '';
+      _whatsappEnabled = profile['whatsappEnabled'] ?? true;
       _departmentController.text = profile['department'] ?? '';
       _studentIdController.text = profile['studentId'] ?? '';
 
@@ -120,6 +122,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         linkedinUrl: _linkedinUrlController.text.isNotEmpty ? _linkedinUrlController.text : null,
         branch: _branchController.text.isNotEmpty ? _branchController.text : null,
         passingYear: _passingYearController.text.isNotEmpty ? int.tryParse(_passingYearController.text) : null,
+        whatsappEnabled: _whatsappEnabled,
       );
 
       // Refresh local UserProvider session
@@ -276,18 +279,59 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               LengthLimitingTextInputFormatter(10),
                             ],
                             decoration: AppTheme.inputDecoration(
-                              labelText: "Phone Number (Optional)",
+                              labelText: _whatsappEnabled
+                                  ? "Phone Number (Required)"
+                                  : "Phone Number (Optional)",
                               prefixIcon: Icons.phone_outlined,
                             ),
                             validator: (val) {
-                              if (val == null || val.isEmpty) {
-                                return null;
+                              if (_whatsappEnabled) {
+                                if (val == null || val.trim().isEmpty) {
+                                  return "Phone number is required for WhatsApp alerts";
+                                }
+                              } else {
+                                if (val == null || val.isEmpty) {
+                                  return null;
+                                }
                               }
-                              if (val.length != 10) {
+                              if (val.trim().length != 10) {
                                 return "Phone number must be exactly 10 digits";
                               }
                               return null;
                             },
+                          ),
+                          const SizedBox(height: 12),
+
+                          // WhatsApp alerts opt-in
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: _whatsappEnabled,
+                                activeColor: AppTheme.primary,
+                                onChanged: (val) {
+                                  setState(() {
+                                    _whatsappEnabled = val ?? false;
+                                  });
+                                },
+                              ),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _whatsappEnabled = !_whatsappEnabled;
+                                    });
+                                  },
+                                  child: const Text(
+                                    "Enable notifications on WhatsApp",
+                                    style: TextStyle(
+                                      color: AppTheme.textSecondary,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 16),
                           TextFormField(

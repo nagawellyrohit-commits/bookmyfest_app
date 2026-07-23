@@ -38,6 +38,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _authService = AuthService();
   bool _isLoading = false;
+  bool _whatsappEnabled = true;
   bool _obscurePassword = true;
   bool _isUploadingResume = false;
   String? _uploadedResumeName;
@@ -294,6 +295,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         parentStudentCollege: isGuest && _isParentOfStudent
             ? _parentStudentCollegeController.text
             : null,
+        whatsappEnabled: _whatsappEnabled,
       );
 
       if (mounted) {
@@ -624,18 +626,59 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 LengthLimitingTextInputFormatter(10),
                               ],
                               decoration: _lightInputDecoration(
-                                labelText: "Phone Number (Optional)",
+                                labelText: _whatsappEnabled
+                                    ? "Phone Number (Required)"
+                                    : "Phone Number (Optional)",
                                 prefixIcon: Icons.phone_outlined,
                               ),
                               validator: (val) {
-                                if (val == null || val.isEmpty) {
-                                  return null;
+                                if (_whatsappEnabled) {
+                                  if (val == null || val.trim().isEmpty) {
+                                    return "Phone number is required for WhatsApp alerts";
+                                  }
+                                } else {
+                                  if (val == null || val.isEmpty) {
+                                    return null;
+                                  }
                                 }
-                                if (val.length != 10) {
+                                if (val.trim().length != 10) {
                                   return "Phone number must be exactly 10 digits";
                                 }
                                 return null;
                               },
+                            ),
+                            const SizedBox(height: 12),
+
+                            // WhatsApp alerts opt-in
+                            Row(
+                              children: [
+                                Checkbox(
+                                  value: _whatsappEnabled,
+                                  activeColor: const Color(0xFF6366F1),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _whatsappEnabled = val ?? false;
+                                    });
+                                  },
+                                ),
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _whatsappEnabled = !_whatsappEnabled;
+                                      });
+                                    },
+                                    child: const Text(
+                                      "Enable notifications on WhatsApp",
+                                      style: TextStyle(
+                                        color: Color(0xFF1E293B),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 20),
 

@@ -36,10 +36,21 @@ export const register = async (req, res, next) => {
     passingYear,
     isParent,
     parentStudentName,
-    parentStudentCollege
+    parentStudentCollege,
+    whatsappEnabled
   } = req.body;
 
   try {
+    // Validate that phone is provided if whatsappEnabled is selected
+    if (whatsappEnabled === true || whatsappEnabled === 'true') {
+      if (!phone || phone.trim() === '') {
+        return res.status(400).json({
+          success: false,
+          message: 'Phone number is required when WhatsApp notifications are enabled.'
+        });
+      }
+    }
+
     // 1. Check if user already exists
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -168,7 +179,8 @@ export const register = async (req, res, next) => {
           fullName,
           email,
           passwordHash,
-          phone,
+          phone: phone || null,
+          whatsappEnabled: whatsappEnabled === true || whatsappEnabled === 'true',
           role: role || 'student',
           collegeId: finalCollegeId,
           department,
@@ -771,7 +783,6 @@ export const deleteAccount = async (req, res, next) => {
   }
 };
 
-// Update user profile (Student/User editing their own profile details)
 export const updateProfile = async (req, res, next) => {
   const userId = req.user.id;
   const {
@@ -779,6 +790,7 @@ export const updateProfile = async (req, res, next) => {
     phone,
     department,
     studentId,
+    whatsappEnabled,
     // Job Profile details:
     resumeUrl,
     businessName,
@@ -795,6 +807,17 @@ export const updateProfile = async (req, res, next) => {
     const currentUser = await prisma.user.findUnique({ where: { id: userId } });
     if (!currentUser) {
       return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Validate that phone is provided if whatsappEnabled is active
+    if (whatsappEnabled === true || whatsappEnabled === 'true') {
+      const finalPhone = phone !== undefined ? phone : currentUser.phone;
+      if (!finalPhone || finalPhone.trim() === '') {
+        return res.status(400).json({
+          success: false,
+          message: 'Phone number is required when WhatsApp notifications are enabled.'
+        });
+      }
     }
 
     // Validate unique studentId per college if modified and is student
@@ -819,9 +842,10 @@ export const updateProfile = async (req, res, next) => {
       where: { id: userId },
       data: {
         fullName: fullName || undefined,
-        phone: phone || null,
+        phone: phone !== undefined ? (phone || null) : undefined,
         department: department || null,
-        studentId: currentUser.role === 'student' && studentId ? studentId.trim() : currentUser.studentId
+        studentId: currentUser.role === 'student' && studentId ? studentId.trim() : currentUser.studentId,
+        whatsappEnabled: whatsappEnabled !== undefined ? (whatsappEnabled === true || whatsappEnabled === 'true') : undefined
       }
     });
 

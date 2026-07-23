@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import axios from 'axios';
+import prisma from '../config/db.js';
 
 const cleanEnvVar = (val) => {
   if (typeof val !== 'string') return val;
@@ -242,6 +243,24 @@ export const sendWhatsAppNotification = async (toPhone, message, templateName = 
     // Auto-prepend Indian country code '91' if 10-digit mobile number is entered
     if (phone.length === 10) {
       phone = `91${phone}`;
+    }
+
+    // Check database to verify user's whatsappEnabled preference
+    const dbUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { phone: phone },
+          { phone: phone.replace(/^91/, '') }
+        ]
+      }
+    });
+
+    if (dbUser && !dbUser.whatsappEnabled) {
+      console.log(`\n--- [WhatsApp Outbound Notification SKIPPED] ---`);
+      console.log(`Recipient: +${phone}`);
+      console.log(`Reason: User has opted out of WhatsApp notifications (whatsappEnabled = false).`);
+      console.log(`------------------------------------------------\n`);
+      return { success: true, skipped: true };
     }
 
     const payload = {

@@ -41,6 +41,7 @@ model User {
   email         String         @unique
   passwordHash  String         @map("password_hash")
   phone         String?
+  whatsappEnabled Boolean        @default(true) @map("whatsapp_enabled")
   role          Role           @default(student)
   department    String?
   idProofUrl    String?        @map("id_proof_url")

@@ -50,6 +50,7 @@ class AuthService {
     bool? isParent,
     String? parentStudentName,
     String? parentStudentCollege,
+    bool? whatsappEnabled,
   }) async {
     try {
       final payload = {
@@ -76,6 +77,7 @@ class AuthService {
         "isParent": isParent ?? false,
         "parentStudentName": parentStudentName?.trim(),
         "parentStudentCollege": parentStudentCollege?.trim(),
+        "whatsappEnabled": whatsappEnabled ?? true,
       };
 
       final response = await http.post(
@@ -253,6 +255,7 @@ class AuthService {
     String? linkedinUrl,
     String? branch,
     int? passingYear,
+    bool? whatsappEnabled,
   }) async {
     try {
       final payload = {
@@ -269,6 +272,7 @@ class AuthService {
         "linkedinUrl": linkedinUrl?.trim(),
         "branch": branch?.trim(),
         "passingYear": passingYear,
+        "whatsappEnabled": whatsappEnabled,
       };
 
       final response = await http.put(
@@ -310,11 +314,23 @@ class AuthService {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
-      final responseData = jsonDecode(response.body);
-      if (response.statusCode == 200 && responseData['success'] == true) {
-        return responseData['fileUrl'];
-      } else {
-        throw Exception(responseData['message'] ?? 'Failed to upload PDF');
+      if (response.statusCode == 413) {
+        throw Exception("File size is too large. Please select a smaller file.");
+      }
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw Exception("Server returned error (${response.statusCode}): ${response.reasonPhrase}");
+      }
+
+      try {
+        final responseData = jsonDecode(response.body);
+        if (responseData['success'] == true) {
+          return responseData['fileUrl'];
+        } else {
+          throw Exception(responseData['message'] ?? 'Failed to upload PDF');
+        }
+      } catch (_) {
+        throw Exception("Failed to upload PDF. Server returned an invalid response.");
       }
     } catch (e) {
       throw Exception(e.toString().replaceAll("Exception: ", ""));
@@ -352,11 +368,23 @@ class AuthService {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
-      final responseData = jsonDecode(response.body);
-      if (response.statusCode == 200 && responseData['success'] == true) {
-        return responseData['fileUrl'];
-      } else {
-        throw Exception(responseData['message'] ?? 'Failed to upload image');
+      if (response.statusCode == 413) {
+        throw Exception("File size is too large. Please select a smaller file.");
+      }
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw Exception("Server returned error (${response.statusCode}): ${response.reasonPhrase}");
+      }
+
+      try {
+        final responseData = jsonDecode(response.body);
+        if (responseData['success'] == true) {
+          return responseData['fileUrl'];
+        } else {
+          throw Exception(responseData['message'] ?? 'Failed to upload image');
+        }
+      } catch (_) {
+        throw Exception("Failed to upload image. Server returned an invalid response.");
       }
     } catch (e) {
       throw Exception(e.toString().replaceAll("Exception: ", ""));
