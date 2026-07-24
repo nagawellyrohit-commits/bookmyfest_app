@@ -220,6 +220,9 @@ export const WhatsAppTemplates = {
   EVENT_CREATION_REJECTED: "event_creation_rejected",
   EVENT_UPDATE_REJECTED: "event_update_rejected",
   COORDINATOR_APPROVED: "coordinator_approved",
+  WHATSAPP_ENABLED: "whatsapp_enabled",
+  WHATSAPP_DISABLED: "whatsapp_disabled",
+  ACCOUNT_DELETED: "account_deleted",
 };
 
 /**

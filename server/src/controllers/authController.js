@@ -703,8 +703,13 @@ export const deleteCoordinator = async (req, res, next) => {
         console.error('[Deletion Email Error]: Failed to send success email:', err)
       );
       if (targetUser.phone) {
-        sendWhatsAppNotification(targetUser.phone, emailText).catch(err =>
-          console.error('[Deletion WhatsApp Error]: Failed to send success WhatsApp:', err)
+        sendWhatsAppNotification(
+            targetUser.phone,
+            emailText,
+            WhatsAppTemplates.ACCOUNT_DELETED,
+            [targetUser.fullName]
+        ).catch(err =>
+            console.error('[Deletion WhatsApp Error]:', err)
         );
       }
 
@@ -726,8 +731,13 @@ export const deleteCoordinator = async (req, res, next) => {
       console.error('[Deletion Email Error]: Failed to send deletion email:', err)
     );
     if (targetUser.phone) {
-      sendWhatsAppNotification(targetUser.phone, emailText).catch(err =>
-        console.error('[Deletion WhatsApp Error]: Failed to send deletion WhatsApp:', err)
+      sendWhatsAppNotification(
+          targetUser.phone,
+          emailText,
+          WhatsAppTemplates.ACCOUNT_DELETED,
+          [targetUser.fullName]
+      ).catch(err =>
+          console.error('[Deletion WhatsApp Error]:', err)
       );
     }
 
@@ -769,8 +779,13 @@ export const deleteAccount = async (req, res, next) => {
       console.error('[Deletion Email Error]: Failed to send success email:', err)
     );
     if (targetUser.phone) {
-      sendWhatsAppNotification(targetUser.phone, emailText).catch(err =>
-        console.error('[Deletion WhatsApp Error]: Failed to send success WhatsApp:', err)
+      sendWhatsAppNotification(
+          targetUser.phone,
+          emailText,
+          WhatsAppTemplates.ACCOUNT_DELETED,
+          [targetUser.fullName]
+      ).catch(err =>
+          console.error('[Deletion WhatsApp Error]:', err)
       );
     }
 
@@ -837,6 +852,32 @@ export const updateProfile = async (req, res, next) => {
       }
     }
 
+    // Send confirmation notifications before updating the database
+    let isNewEnabled = whatsappEnabled !== undefined ? (whatsappEnabled === true || whatsappEnabled === 'true') : currentUser.whatsappEnabled;
+    let isOldEnabled = currentUser.whatsappEnabled;
+
+    if (isNewEnabled && !isOldEnabled) {
+      const targetPhone = phone !== undefined ? phone : currentUser.phone;
+      if (targetPhone) {
+        sendWhatsAppNotification(
+          targetPhone,
+          `WhatsApp notifications enabled`,
+          WhatsAppTemplates.WHATSAPP_ENABLED,
+          [currentUser.fullName]
+        ).catch(err => console.error('[WhatsApp Opt-In Notification Error]:', err));
+      }
+    } else if (!isNewEnabled && isOldEnabled) {
+      const targetPhone = currentUser.phone;
+      if (targetPhone) {
+        sendWhatsAppNotification(
+          targetPhone,
+          `WhatsApp notifications disabled`,
+          WhatsAppTemplates.WHATSAPP_DISABLED,
+          [currentUser.fullName]
+        ).catch(err => console.error('[WhatsApp Opt-Out Notification Error]:', err));
+      }
+    }
+
     // Update user details
     const updatedUser = await prisma.user.update({
       where: { id: userId },
@@ -883,13 +924,6 @@ export const updateProfile = async (req, res, next) => {
     }
 
     const { passwordHash: _, ...userWithoutPassword } = updatedUser;
-    // Send a confirmation WhatsApp message if phone number was added/updated
-    if (phone && phone.trim() !== currentUser.phone) {
-      sendWhatsAppNotification(
-        phone,
-        `📱 *BookMyFest Notifications Enabled*\n\nHello ${updatedUser.fullName}, your phone number has been linked to your BookMyFest account! You will now receive all event alerts and notifications on WhatsApp.`
-      ).catch(err => console.error('[Profile Update WhatsApp Error]:', err));
-    }
 
     res.status(200).json({
       success: true,
